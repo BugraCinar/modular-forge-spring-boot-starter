@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Doğrulama</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        .success {
+            color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div th:if="${success}" class="success">
+            <div class="icon">✓</div>
+            <h1>Email Doğrulama Başarılı</h1>
+            <p>Email adresiniz doğrulandı. Artık hesabınıza giriş yapabilirsiniz.</p>
+        </div>
+        <div th:unless="${success}" class="error">
+            <div class="icon">✗</div>
+            <h1>Doğrulama Başarısız</h1>
+            <p>Doğrulama bağlantısı geçersiz veya süresi dolmuş.</p>
+        </div>
+    </div>
+</body>
+</html>
