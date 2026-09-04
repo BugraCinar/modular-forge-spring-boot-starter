@@ -15,7 +15,7 @@ jobs:
     env:
       NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -31,7 +31,7 @@ jobs:
       - name: Audit with cached NVD data
         if: env.NVD_API_KEY == ''
         run: ./mvnw -B -ntp -Psecurity-audit -DskipTests -DautoUpdate=false verify
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: dependency-check-report
