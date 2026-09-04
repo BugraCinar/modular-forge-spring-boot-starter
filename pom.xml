@@ -11,10 +11,10 @@
         <relativePath/>
     </parent>
 
-    <groupId>dev.modulithforge</groupId>
-    <artifactId>modulith-forge</artifactId>
+    <groupId>dev.modularforge</groupId>
+    <artifactId>modular-forge-spring-boot-starter</artifactId>
     <version>1.0.0-SNAPSHOT</version>
-    <name>ModulithForge</name>
+    <name>Modular Forge</name>
     <description>Modular and security-focused Spring Boot REST API starter</description>
 
     <properties>
@@ -116,14 +116,14 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- removable module: dev.modulithforge.storage.r2 -->
+        <!-- removable module: dev.modularforge.storage.r2 -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>s3</artifactId>
             <version>${aws.sdk.version}</version>
         </dependency>
 
-        <!-- removable module: dev.modulithforge.twofactor -->
+        <!-- removable module: dev.modularforge.twofactor -->
         <dependency>
             <groupId>com.warrenstrange</groupId>
             <artifactId>googleauth</artifactId>

@@ -1,10 +1,10 @@
 # Modular plan
 
-This file is the first stop for a person or coding agent changing ModulithForge. The goal is practical removability: switching a module off removes its runtime surface; deleting its package and declared dependencies must leave unrelated modules compilable.
+This file is the first stop for a person or coding agent changing Modular Forge. The goal is practical removability: switching a module off removes its runtime surface; deleting its package and declared dependencies must leave unrelated modules compilable.
 
 ## Module shape
 
-Each feature owns a top-level package below `dev.modulithforge`:
+Each feature owns a top-level package below `dev.modularforge`:
 
 ```text
 feature/
@@ -67,7 +67,7 @@ Use two passes:
 Search before and after removal:
 
 ```bash
-rg "dev\.modulithforge\.<module>|app\.modules\.<module>|MODULE_<MODULE>" .
+rg "dev\.modularforge\.<module>|app\.modules\.<module>|MODULE_<MODULE>" .
 ./mvnw clean verify
 ```
 

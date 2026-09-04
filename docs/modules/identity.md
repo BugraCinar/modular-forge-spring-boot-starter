@@ -1,6 +1,6 @@
 # Identity module
 
-Id `identity`; package `dev.modulithforge.identity`; required.
+Id `identity`; package `dev.modularforge.identity`; required.
 
 It owns user/admin entities and repositories. Authentication, authorization, admin management, profile, tokens, and optional sidecar modules refer to identity ids.
 

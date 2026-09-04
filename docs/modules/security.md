@@ -1,6 +1,6 @@
 # Security module
 
-Id `security`; package `dev.modulithforge.security`; required.
+Id `security`; package `dev.modularforge.security`; required.
 
 It owns the Spring Security chain, JWT filter/signing support, access-denied/authentication handlers, CORS/CAPTCHA configuration, CSRF matcher, authorization helper, and `SecurityFilterExtension`.
 

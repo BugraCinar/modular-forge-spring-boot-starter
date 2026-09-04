@@ -1,6 +1,6 @@
 # Admin management module
 
-Id `admin-management`; package `dev.modulithforge.admin`; default on; toggle `app.modules.admin-management.enabled`.
+Id `admin-management`; package `dev.modularforge.admin`; default on; toggle `app.modules.admin-management.enabled`.
 
 It owns admin/profile and user-management endpoints and DTOs. Admin identity remains in the required identity package because authentication and authorization need it.
 

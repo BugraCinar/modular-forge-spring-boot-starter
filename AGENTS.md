@@ -4,7 +4,7 @@ Read `docs/MODULAR_PLAN.md` and the target file under `docs/modules/` before cha
 
 ## Architecture rules
 
-- Production code lives below `dev.modulithforge`.
+- Production code lives below `dev.modularforge`.
 - A feature owns its controllers, services, DTOs, persistence, and configuration inside one top-level package.
 - Optional modules must not be imported by another feature. Put the smallest necessary contract in `shared`, `auth`, or `security`, then inject that contract.
 - Adapters implement ports; core code never injects an adapter class. R2 implements `ProfileImageStorage`, SMTP implements `NotificationGateway`, audit implements the audit ports, and TOTP implements `SecondFactorGateway`.

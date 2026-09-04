@@ -1,4 +1,4 @@
-# ModulithForge
+# Modular Forge
 
 A security-focused Spring Boot 4 REST API starter organized as removable feature modules. It targets Java 21 and keeps optional features behind configuration switches and small ports, so a storage, audit, notification, or second-factor implementation can be replaced without spreading edits across the application.
 

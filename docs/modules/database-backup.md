@@ -1,6 +1,6 @@
 # Database backup module
 
-Id `database-backup`; package `dev.modulithforge.backup`; default off; toggle `app.modules.database-backup.enabled`.
+Id `database-backup`; package `dev.modularforge.backup`; default off; toggle `app.modules.database-backup.enabled`.
 
 The built-in implementation owns the manual endpoint, scheduled job, backup directory, and `mysqldump` process. It supports MySQL and MariaDB only. It emails a raw SQL attachment, so production systems with sensitive data should replace it with encrypted object storage and a tested restore/retention process.
 

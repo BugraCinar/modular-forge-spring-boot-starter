@@ -1,6 +1,6 @@
 # SMTP notification adapter
 
-Id `notification-email`; package `dev.modulithforge.notification`; default on; toggle `app.modules.notification-email.enabled`.
+Id `notification-email`; package `dev.modularforge.notification`; default on; toggle `app.modules.notification-email.enabled`.
 
 It implements `shared.notification.NotificationGateway` with Spring Mail and Thymeleaf templates in `src/main/resources/templates`.
 

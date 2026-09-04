@@ -1,6 +1,6 @@
 # Rate-limit module
 
-Id `rate-limit`; package `dev.modulithforge.ratelimit`; required by the public authentication API.
+Id `rate-limit`; package `dev.modularforge.ratelimit`; required by the public authentication API.
 
 It owns global and flow-specific limits backed by Redis. Production defaults to fail closed so loss of Redis cannot silently remove abuse controls.
 

@@ -1,6 +1,6 @@
 # Development seed-data module
 
-Id `seed-data`; package `dev.modulithforge.bootstrap`; default off; toggle `app.data.init-users`.
+Id `seed-data`; package `dev.modularforge.bootstrap`; default off; toggle `app.data.init-users`.
 
 It creates explicitly configured local user/admin accounts. It rejects short or missing passwords and does not print them.
 

@@ -1,6 +1,6 @@
 # Authentication module
 
-Id `authentication`; package `dev.modulithforge.auth`; required.
+Id `authentication`; package `dev.modularforge.auth`; required.
 
 It owns registration, login, password reset/verification, refresh-token storage and rotation, browser cookie handling, and the `SecondFactorGateway` extension point.
 

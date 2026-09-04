@@ -1,6 +1,6 @@
 # Sentry observability module
 
-Id `observability`; package `dev.modulithforge.observability` contains its verification endpoint; default off; toggle `app.modules.observability.enabled`.
+Id `observability`; package `dev.modularforge.observability` contains its verification endpoint; default off; toggle `app.modules.observability.enabled`.
 
 The Sentry starter is activated through configuration and classpath auto-configuration. Default PII sending is disabled.
 

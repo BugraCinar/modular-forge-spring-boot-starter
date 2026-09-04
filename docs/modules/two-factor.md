@@ -1,13 +1,13 @@
 # TOTP two-factor module
 
-Id `two-factor`; package `dev.modulithforge.twofactor`; default off; toggle `app.modules.two-factor.enabled`.
+Id `two-factor`; package `dev.modularforge.twofactor`; default off; toggle `app.modules.two-factor.enabled`.
 
 It owns `/api/v1/admin/2fa/**`, `two_factor_credentials`, TOTP/QR dependencies, encrypted secrets, replay metadata, and hashed login challenges. Authentication sees only `auth.SecondFactorGateway`; `Admin` has no 2FA fields.
 
 ## Remove
 
 1. Set the toggle to `false` and verify the module endpoint reports it disabled.
-2. Delete `src/main/java/dev/modulithforge/twofactor` and its tests.
+2. Delete `src/main/java/dev/modularforge/twofactor` and its tests.
 3. Remove `googleauth` and ZXing core/javase only if no replacement uses them.
 4. Remove `TWO_FACTOR_ENCRYPTION_KEY` and `app.modules.two-factor.*` properties.
 5. Drop `two_factor_credentials` with a reviewed migration. This destroys enrolled authenticators, so announce forced re-enrollment if replacing the implementation.

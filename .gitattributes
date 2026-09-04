@@ -10,3 +10,4 @@
 *.md text eol=lf
 *.html text eol=lf
 *.json text eol=lf
+*.template text eol=lf

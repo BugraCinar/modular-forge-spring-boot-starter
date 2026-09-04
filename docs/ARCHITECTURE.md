@@ -1,6 +1,6 @@
 # Architecture
 
-ModulithForge is a modular monolith: one deployable Spring Boot application with explicit feature boundaries. It avoids the network and operational cost of microservices while keeping a later extraction path visible.
+Modular Forge is a modular monolith: one deployable Spring Boot application with explicit feature boundaries. It avoids the network and operational cost of microservices while keeping a later extraction path visible.
 
 ```text
 HTTP

@@ -1,6 +1,6 @@
 # User profile module
 
-Id `user-profile`; package `dev.modulithforge.profile`; default on; toggle `app.modules.user-profile.enabled`.
+Id `user-profile`; package `dev.modularforge.profile`; default on; toggle `app.modules.user-profile.enabled`.
 
 It owns self-service profile, password/email change, deactivation, anonymization, profile DTOs, and the `ProfileImageStorage` port. User identity remains required by authentication.
 

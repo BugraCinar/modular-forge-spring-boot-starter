@@ -1,6 +1,6 @@
 # OpenAPI module
 
-Id `api-docs`; implementation `dev.modulithforge.observability.OpenApiConfig`; default off outside `dev`; toggle `app.swagger.enabled`.
+Id `api-docs`; implementation `dev.modularforge.observability.OpenApiConfig`; default off outside `dev`; toggle `app.swagger.enabled`.
 
 ## Remove
 
