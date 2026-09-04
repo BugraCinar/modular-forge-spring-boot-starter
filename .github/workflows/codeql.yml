@@ -29,4 +29,20 @@ jobs:
           build-mode: manual
       - run: chmod +x mvnw
       - run: ./mvnw -B -ntp -DskipTests package
-      - uses: github/codeql-action/analyze@v4
+      - name: Analyze and upload to GitHub Code Scanning
+        if: github.event.repository.private == false
+        uses: github/codeql-action/analyze@v4
+      - name: Analyze without GitHub Code Security
+        if: github.event.repository.private
+        uses: github/codeql-action/analyze@v4
+        with:
+          output: ../results
+          upload: never
+          upload-database: false
+      - name: Upload private-repository SARIF
+        if: github.event.repository.private
+        uses: actions/upload-artifact@v7
+        with:
+          name: codeql-sarif
+          path: ../results
+          retention-days: 14
