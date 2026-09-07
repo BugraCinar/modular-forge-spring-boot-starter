@@ -283,10 +283,6 @@ public class AdminManagementService {
         Admin targetAdmin = adminRepository.findById(targetAdminId)
             .orElseThrow(() -> new ResourceNotFoundException("Admin not found with ID: " + targetAdminId));
         validateAdminPermission(requestingAdmin, targetAdmin, "delete");
-        if (targetAdmin.getLevel() == 0) {
-            throw new BadRequestException("Cannot delete super admin account");
-        }
-
         targetAdmin.setIsActive(false);
         targetAdmin.invalidateAccessTokens();
         adminRepository.save(targetAdmin);
@@ -326,10 +322,6 @@ public class AdminManagementService {
         Admin targetAdmin = adminRepository.findById(targetAdminId)
             .orElseThrow(() -> new ResourceNotFoundException("Admin not found with ID: " + targetAdminId));
         validateAdminPermission(requestingAdmin, targetAdmin, "deactivate");
-        if (targetAdmin.getLevel() == 0) {
-            throw new BadRequestException("Cannot deactivate super admin account");
-        }
-
         targetAdmin.setIsActive(false);
         targetAdmin.invalidateAccessTokens();
         targetAdmin = adminRepository.save(targetAdmin);

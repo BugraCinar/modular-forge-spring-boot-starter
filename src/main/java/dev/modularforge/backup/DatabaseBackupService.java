@@ -20,12 +20,16 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 
 @Service
 @ConditionalOnProperty(prefix = "app.modules.database-backup", name = "enabled", havingValue = "true")
 public class DatabaseBackupService {
 
     private static final Logger logger = LoggerFactory.getLogger(DatabaseBackupService.class);
+
+    private BiFunction<DatabaseTarget, Path, Boolean> dumpExecutor = this::createMySQLDump;
+    private ProcessStarter processStarter = ProcessBuilder::start;
 
     @Autowired
     private JavaMailSender mailSender;
@@ -71,7 +75,7 @@ public class DatabaseBackupService {
             String backupFilename = String.format("modularforge_backup_%s.sql", timestamp);
             backupPath = Paths.get(backupDirectory, backupFilename);
             DatabaseTarget target = parseDatabaseTarget(databaseUrl);
-            boolean backupSuccess = createMySQLDump(target, backupPath);
+            boolean backupSuccess = dumpExecutor.apply(target, backupPath);
 
             if (backupSuccess) {
                 emailBackup(backupPath.toFile(), timestamp, target.databaseName());
@@ -103,9 +107,9 @@ public class DatabaseBackupService {
 
         URI uri = URI.create(jdbcUrl.substring("jdbc:".length()));
         String host = uri.getHost();
-        String path = uri.getPath();
-        String databaseName = path == null || path.length() < 2 ? "" : path.substring(1);
-        if (host == null || host.isBlank() || !databaseName.matches("[A-Za-z0-9_$-]{1,64}")
+        String path = java.util.Objects.requireNonNullElse(uri.getPath(), "");
+        String databaseName = path.length() < 2 ? "" : path.substring(1);
+        if (host == null || !databaseName.matches("[A-Za-z0-9_$-]{1,64}")
                 || databaseName.startsWith("-")) {
             throw new IllegalStateException("The JDBC URL contains an unsupported database host or name");
         }
@@ -136,7 +140,7 @@ public class DatabaseBackupService {
             logger.info("Creating database backup for database '{}' from {}:{} to file: {}",
                        target.databaseName(), target.host(), target.port(), backupFilePath);
 
-            Process process = processBuilder.start();
+            Process process = processStarter.start(processBuilder);
             boolean finished = process.waitFor(5, TimeUnit.MINUTES);
 
             if (finished && process.exitValue() == 0) {
@@ -218,5 +222,10 @@ public class DatabaseBackupService {
     }
 
     private record DatabaseTarget(String host, int port, String databaseName) {
+    }
+
+    @FunctionalInterface
+    interface ProcessStarter {
+        Process start(ProcessBuilder processBuilder) throws IOException;
     }
 }

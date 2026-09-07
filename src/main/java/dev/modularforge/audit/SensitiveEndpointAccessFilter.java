@@ -51,13 +51,6 @@ public class SensitiveEndpointAccessFilter extends OncePerRequestFilter {
             Map.entry("/api/v1/admin/auth-error-logs", new EndpointConfig("ERROR_LOGS", "MEDIUM")),
             Map.entry(ApiRoutes.ADMIN_IMAGE, new EndpointConfig("IMAGE_MANAGEMENT", "LOW"))
     );
-    private static final List<PatternConfig> SENSITIVE_PATTERNS = List.of(
-            new PatternConfig(Pattern.compile("/api/v1/admin/admins/\\d+.*"), "ADMIN_MANAGEMENT", "HIGH"),
-            new PatternConfig(Pattern.compile("/api/v1/admin/tokens/.*"), "TOKEN_MANAGEMENT", "HIGH"),
-            new PatternConfig(Pattern.compile(Pattern.quote(ApiRoutes.DATABASE_BACKUP) + "/.*"), "DATABASE_BACKUP", "CRITICAL"),
-            new PatternConfig(Pattern.compile("/api/v1/admin/activity-logs/.*"), "ACTIVITY_LOGS", "MEDIUM"),
-            new PatternConfig(Pattern.compile("/api/v1/admin/auth-error-logs/.*"), "ERROR_LOGS", "MEDIUM")
-    );
     private static final List<PatternConfig> SUSPICIOUS_PATH_PATTERNS = List.of(
             new PatternConfig(Pattern.compile("(?i).*\\.env.*"), "SUSPICIOUS_FILE_ACCESS", "CRITICAL"),
             new PatternConfig(Pattern.compile("(?i).*/\\.env$"), "SUSPICIOUS_FILE_ACCESS", "CRITICAL"),
@@ -197,11 +190,6 @@ public class SensitiveEndpointAccessFilter extends OncePerRequestFilter {
         for (Map.Entry<String, EndpointConfig> entry : SENSITIVE_ENDPOINTS.entrySet()) {
             if (path.startsWith(entry.getKey())) {
                 return entry.getValue();
-            }
-        }
-        for (PatternConfig patternConfig : SENSITIVE_PATTERNS) {
-            if (patternConfig.pattern.matcher(path).matches()) {
-                return new EndpointConfig(patternConfig.category, patternConfig.severity);
             }
         }
         for (PatternConfig patternConfig : SUSPICIOUS_PATH_PATTERNS) {

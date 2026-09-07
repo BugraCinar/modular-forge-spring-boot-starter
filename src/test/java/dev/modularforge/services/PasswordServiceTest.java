@@ -8,6 +8,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PasswordService Unit Tests")
@@ -24,6 +26,46 @@ class PasswordServiceTest {
         ReflectionTestUtils.setField(passwordService, "parallelism", 1);
         ReflectionTestUtils.setField(passwordService, "saltLength", 16);
         ReflectionTestUtils.setField(passwordService, "hashLength", 32);
+    }
+
+    @Test
+    void validatesPepperAndEveryArgon2SecurityFloor() {
+        String validPepper = java.util.Base64.getEncoder().encodeToString(new byte[32]);
+        ReflectionTestUtils.setField(passwordService, "pepper", validPepper);
+        assertThatCode(() -> ReflectionTestUtils.invokeMethod(passwordService, "validateConfiguration"))
+                .doesNotThrowAnyException();
+
+        ReflectionTestUtils.setField(passwordService, "pepper", "not-base64!");
+        assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(passwordService, "validateConfiguration"))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("base64");
+
+        ReflectionTestUtils.setField(passwordService, "pepper",
+                java.util.Base64.getEncoder().encodeToString(new byte[31]));
+        assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(passwordService, "validateConfiguration"))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("32 random bytes");
+
+        ReflectionTestUtils.setField(passwordService, "pepper", validPepper);
+        String[] fields = {"memoryCost", "timeCost", "parallelism", "saltLength", "hashLength"};
+        int[] invalidValues = {19_455, 1, 0, 15, 31};
+        int[] validValues = {65_536, 2, 1, 16, 32};
+        for (int i = 0; i < fields.length; i++) {
+            ReflectionTestUtils.setField(passwordService, fields[i], invalidValues[i]);
+            assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(passwordService, "validateConfiguration"))
+                    .isInstanceOf(IllegalStateException.class).hasMessageContaining("security floor");
+            ReflectionTestUtils.setField(passwordService, fields[i], validValues[i]);
+        }
+    }
+
+    @Test
+    void rejectsMissingHashInputsAndFailsVerificationClosed() {
+        assertThatThrownBy(() -> passwordService.hashPassword(null, "salt"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> passwordService.hashPassword("password", null))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThat(passwordService.verifyPassword(null, "salt", "hash")).isFalse();
+        assertThat(passwordService.verifyPassword("password", null, "hash")).isFalse();
+        assertThat(passwordService.verifyPassword("password", "salt", null)).isFalse();
     }
 
     @Nested

@@ -77,8 +77,7 @@ public class JwtAuthEntryPoint implements AuthenticationEntryPoint {
                lowerUri.endsWith(".xml") ||
                lowerUri.endsWith(".yml") ||
                lowerUri.endsWith(".yaml") ||
-               lowerUri.endsWith("web.config") ||
-               lowerUri.contains("/.git/");
+               lowerUri.endsWith("web.config");
     }
 
 }

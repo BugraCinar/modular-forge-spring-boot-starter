@@ -25,6 +25,7 @@ import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -218,5 +219,33 @@ class TwoFactorAuthControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.accessToken").value("access-token-value"))
                 .andExpect(jsonPath("$.user.username").value("adminUser"));
+    }
+
+    @Test
+    void verifyLoginMovesRefreshTokenIntoCookieWhenEnabled() throws Exception {
+        Admin admin = new Admin();
+        admin.setId(1L);
+        admin.setUsername("adminUser");
+        admin.setEmail("admin@test.com");
+        admin.setIsActive(true);
+        admin.setLevel(0);
+        RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setToken("refresh-token-cookie-value");
+        when(twoFactorAuthService.verifyCodeByUsername("adminUser", "123456", "valid-challenge"))
+                .thenReturn(true);
+        when(twoFactorAuthService.markLoginSuccessful("adminUser")).thenReturn(admin);
+        when(jwtUtils.generateAdminToken("adminUser", 1L, 0, 0L)).thenReturn("access-token-value");
+        when(refreshTokenService.createRefreshToken(eq(1L), eq("admin"), any())).thenReturn(refreshToken);
+        when(refreshTokenCookieService.useCookies()).thenReturn(true);
+        String body = objectMapper.writeValueAsString(Map.of(
+                "username", "adminUser", "code", "123456", "challengeToken", "valid-challenge"));
+
+        mockMvc.perform(post("/api/v1/admin/2fa/verify-login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("access-token-value"));
+
+        verify(refreshTokenCookieService).setRefreshTokenCookie(any(), eq("refresh-token-cookie-value"));
     }
 }

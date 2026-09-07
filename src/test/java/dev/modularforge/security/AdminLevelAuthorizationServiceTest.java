@@ -60,10 +60,76 @@ class AdminLevelAuthorizationServiceTest {
         assertThat(authorizationService.isLevel0()).isTrue();
     }
 
+    @Test
+    void levelHelpersAcceptOnlyTheirConfiguredRanges() {
+        Admin levelOne = admin(4L, 1, true, null);
+        when(adminRepository.findById(4L)).thenReturn(Optional.of(levelOne));
+        authenticateAsAdmin(4L);
+
+        assertThat(authorizationService.isLevel0()).isFalse();
+        assertThat(authorizationService.isLevel0Or1()).isTrue();
+        assertThat(authorizationService.isLevel0Or1Or2()).isTrue();
+
+        levelOne.setLevel(3);
+        assertThat(authorizationService.isLevel0Or1()).isFalse();
+        assertThat(authorizationService.isLevel0Or1Or2()).isFalse();
+    }
+
+    @Test
+    void missingAuthenticationFailsClosed() {
+        assertThat(authorizationService.isLevel0()).isFalse();
+    }
+
+    @Test
+    void unauthenticatedPrincipalFailsClosed() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("admin", "password"));
+
+        assertThat(authorizationService.isLevel0()).isFalse();
+    }
+
+    @Test
+    void missingAdminIdFailsClosed() {
+        authenticateAsAdmin(null);
+
+        assertThat(authorizationService.hasLevel(0)).isFalse();
+    }
+
+    @Test
+    void unknownAdminFailsClosed() {
+        when(adminRepository.findById(99L)).thenReturn(Optional.empty());
+        authenticateAsAdmin(99L);
+
+        assertThat(authorizationService.hasMaxLevel(2)).isFalse();
+    }
+
+    @Test
+    void expiredLockNoLongerBlocksAdmin() {
+        Admin admin = admin(5L, true, LocalDateTime.now().minusMinutes(1));
+        when(adminRepository.findById(5L)).thenReturn(Optional.of(admin));
+        authenticateAsAdmin(5L);
+
+        assertThat(authorizationService.isLevel0()).isTrue();
+    }
+
+    @Test
+    void malformedAuthenticationDetailsFailClosed() {
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                "admin", null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+        authentication.setDetails("not-an-admin-id");
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        assertThat(authorizationService.isLevel0()).isFalse();
+    }
+
     private Admin admin(Long id, Boolean active, LocalDateTime lockedUntil) {
+        return admin(id, 0, active, lockedUntil);
+    }
+
+    private Admin admin(Long id, int level, Boolean active, LocalDateTime lockedUntil) {
         Admin admin = new Admin();
         admin.setId(id);
-        admin.setLevel(0);
+        admin.setLevel(level);
         admin.setIsActive(active);
         admin.setLockedUntil(lockedUntil);
         return admin;

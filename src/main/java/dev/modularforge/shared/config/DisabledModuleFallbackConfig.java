@@ -55,13 +55,13 @@ public class DisabledModuleFallbackConfig {
     @ConditionalOnMissingBean(NotificationGateway.class)
     NotificationGateway missingNotificationGateway() {
         return new NotificationGateway() {
-            private void unavailable() {
-                throw new IllegalStateException("No notification provider is configured");
+            private IllegalStateException unavailable() {
+                return new IllegalStateException("No notification provider is configured");
             }
-            public void sendVerificationEmail(String a, String b, String c) { unavailable(); }
-            public void sendPasswordResetEmail(String a, String b, String c) { unavailable(); }
-            public void sendEmailChangeVerificationEmail(String a, String b, String c) { unavailable(); }
-            public void sendSystemNotificationEmail(String a, String b) { unavailable(); }
+            public void sendVerificationEmail(String a, String b, String c) { throw unavailable(); }
+            public void sendPasswordResetEmail(String a, String b, String c) { throw unavailable(); }
+            public void sendEmailChangeVerificationEmail(String a, String b, String c) { throw unavailable(); }
+            public void sendSystemNotificationEmail(String a, String b) { throw unavailable(); }
         };
     }
 }

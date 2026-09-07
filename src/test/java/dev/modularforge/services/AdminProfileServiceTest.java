@@ -11,6 +11,7 @@ import dev.modularforge.shared.error.BadRequestException;
 import dev.modularforge.shared.error.ResourceNotFoundException;
 import dev.modularforge.identity.model.Admin;
 import dev.modularforge.identity.AdminRepository;
+import dev.modularforge.identity.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +36,7 @@ class AdminProfileServiceTest {
     private AdminProfileService adminProfileService;
 
     @Mock private AdminRepository adminRepository;
+    @Mock private UserRepository userRepository;
     @Mock private PasswordService passwordService;
     @Mock private RefreshTokenService refreshTokenService;
 
@@ -133,6 +135,36 @@ class AdminProfileServiceTest {
         assertThat(admin.getFirstName()).isEqualTo("Updated");
         assertThat(admin.getLastName()).isEqualTo("Name");
         verify(adminRepository).save(admin);
+    }
+
+    @Test
+    void updateAdminProfileAppliesAvailableEmailAndProfilePicture() {
+        Admin admin = makeAdmin(1L, 1);
+        UpdateAdminProfileRequest request = new UpdateAdminProfileRequest();
+        request.setEmail("new-admin@test.com");
+        request.setProfilePicture("https://img.example.com/new.jpg");
+        when(adminRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(adminRepository.existsByEmail("new-admin@test.com")).thenReturn(false);
+        when(userRepository.existsByEmail("new-admin@test.com")).thenReturn(false);
+        when(adminRepository.save(admin)).thenReturn(admin);
+
+        AdminProfileDTO result = adminProfileService.updateAdminProfile(1L, request);
+
+        assertThat(result.getEmail()).isEqualTo("new-admin@test.com");
+        assertThat(result.getProfilePicture()).isEqualTo("https://img.example.com/new.jpg");
+    }
+
+    @Test
+    void updateAdminProfileRejectsEmailOwnedByUser() {
+        Admin admin = makeAdmin(1L, 1);
+        UpdateAdminProfileRequest request = new UpdateAdminProfileRequest();
+        request.setEmail("user@test.com");
+        when(adminRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(adminRepository.existsByEmail("user@test.com")).thenReturn(false);
+        when(userRepository.existsByEmail("user@test.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> adminProfileService.updateAdminProfile(1L, request))
+                .isInstanceOf(BadRequestException.class);
     }
 
     @Test
@@ -301,6 +333,18 @@ class AdminProfileServiceTest {
     }
 
     @Test
+    void reactivateAccountReportsMissingTargetAndRequester() {
+        when(adminRepository.findById(1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> adminProfileService.reactivateAccount(1L, 2L))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        when(adminRepository.findById(1L)).thenReturn(Optional.of(makeAdmin(1L, 1)));
+        when(adminRepository.findById(2L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> adminProfileService.reactivateAccount(1L, 2L))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
     @DisplayName("verifyProfileImageOwnership - null URL returns false without DB call")
     void verifyProfileImageOwnership_nullUrl_returnsFalse() {
         boolean result = adminProfileService.verifyProfileImageOwnership(1L, null);
@@ -340,5 +384,25 @@ class AdminProfileServiceTest {
         boolean result = adminProfileService.verifyProfileImageOwnership(1L, "https://img.example.com/pic.jpg");
 
         assertThat(result).isTrue();
+    }
+
+    @Test
+    void verifyProfileImageOwnershipReturnsFalseWhenNoPictureIsStored() {
+        Admin admin = makeAdmin(1L, 1);
+        admin.setProfilePicture(null);
+        when(adminRepository.findById(1L)).thenReturn(Optional.of(admin));
+        assertThat(adminProfileService.verifyProfileImageOwnership(1L, "https://img.example.com/pic.jpg")).isFalse();
+
+        admin.setProfilePicture("");
+        assertThat(adminProfileService.verifyProfileImageOwnership(1L, "https://img.example.com/pic.jpg")).isFalse();
+    }
+
+    @Test
+    void verifyProfileImageOwnershipReportsMissingAdmin() {
+        when(adminRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> adminProfileService.verifyProfileImageOwnership(
+                99L, "https://img.example.com/pic.jpg"))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 }

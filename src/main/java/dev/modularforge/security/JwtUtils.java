@@ -91,12 +91,7 @@ public class JwtUtils {
 
     public boolean validateToken(String token) {
         try {
-            Claims claims = parse(token).getPayload();
-            Date expiration = claims.getExpiration();
-            if (expiration != null && expiration.before(new Date())) {
-                return false;
-            }
-
+            parse(token);
             return true;
         } catch (Exception e) {
             return false;

@@ -123,7 +123,7 @@ public class AdminProfileService {
 
         Admin requestingAdmin = adminRepository.findById(requestingAdminId)
             .orElseThrow(() -> new ResourceNotFoundException("Requesting admin not found with ID: " + requestingAdminId));
-        if (requestingAdmin.getLevel() > admin.getLevel() && requestingAdmin.getLevel() != 0) {
+        if (requestingAdmin.getLevel() > admin.getLevel()) {
             throw new BadRequestException("You don't have permission to deactivate this admin account");
         }
         if (admin.getLevel() == 0) {
@@ -146,7 +146,7 @@ public class AdminProfileService {
 
         Admin requestingAdmin = adminRepository.findById(requestingAdminId)
             .orElseThrow(() -> new ResourceNotFoundException("Requesting admin not found with ID: " + requestingAdminId));
-        if (requestingAdmin.getLevel() > admin.getLevel() && requestingAdmin.getLevel() != 0) {
+        if (requestingAdmin.getLevel() > admin.getLevel()) {
             throw new BadRequestException("You don't have permission to reactivate this admin account");
         }
 

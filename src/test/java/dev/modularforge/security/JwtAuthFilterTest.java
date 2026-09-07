@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -49,11 +50,11 @@ class JwtAuthFilterTest {
         filter = new JwtAuthFilter(jwtUtils, userRepository, adminRepository);
         SecurityContextHolder.clearContext();
 
-        when(jwtUtils.validateToken(TOKEN)).thenReturn(true);
-        when(jwtUtils.extractUsername(TOKEN)).thenReturn("user");
-        when(jwtUtils.extractUserIdAsLong(TOKEN)).thenReturn(1L);
-        when(jwtUtils.extractRole(TOKEN)).thenReturn("user");
-        when(jwtUtils.extractUserType(TOKEN)).thenReturn("app_user");
+        lenient().when(jwtUtils.validateToken(TOKEN)).thenReturn(true);
+        lenient().when(jwtUtils.extractUsername(TOKEN)).thenReturn("user");
+        lenient().when(jwtUtils.extractUserIdAsLong(TOKEN)).thenReturn(1L);
+        lenient().when(jwtUtils.extractRole(TOKEN)).thenReturn("user");
+        lenient().when(jwtUtils.extractUserType(TOKEN)).thenReturn("app_user");
     }
 
     @AfterEach
@@ -112,6 +113,99 @@ class JwtAuthFilterTest {
     void legacyTokenWithoutAuthorizationVersion_doesNotEstablishAuthentication() throws Exception {
         when(jwtUtils.extractAuthVersion(TOKEN)).thenReturn(null);
 
+        filter.doFilter(requestWithToken(), new MockHttpServletResponse(), filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void missingBasicAndInvalidBearerHeadersPassThroughUnauthenticated() throws Exception {
+        MockHttpServletRequest missing = new MockHttpServletRequest();
+        filter.doFilter(missing, new MockHttpServletResponse(), filterChain);
+
+        MockHttpServletRequest basic = new MockHttpServletRequest();
+        basic.addHeader("Authorization", "Basic value");
+        filter.doFilter(basic, new MockHttpServletResponse(), filterChain);
+
+        when(jwtUtils.validateToken("invalid")).thenReturn(false);
+        MockHttpServletRequest invalid = new MockHttpServletRequest();
+        invalid.addHeader("Authorization", "Bearer invalid");
+        filter.doFilter(invalid, new MockHttpServletResponse(), filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void malformedBearerTokenIsContained() throws Exception {
+        when(jwtUtils.validateToken("broken")).thenThrow(new IllegalArgumentException("bad token"));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer broken");
+
+        filter.doFilter(request, new MockHttpServletResponse(), filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(filterChain).doFilter(org.mockito.ArgumentMatchers.eq(request), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void missingClaimsUnknownRolesAndUnknownAccountsFailClosed() throws Exception {
+        when(jwtUtils.extractUserIdAsLong(TOKEN)).thenReturn((Long) null, 1L, 1L, 1L);
+        when(jwtUtils.extractRole(TOKEN)).thenReturn("user", null, "service", "user");
+        when(jwtUtils.extractAuthVersion(TOKEN)).thenReturn(1L);
+
+        filter.doFilter(requestWithToken(), new MockHttpServletResponse(), filterChain);
+        filter.doFilter(requestWithToken(), new MockHttpServletResponse(), filterChain);
+        filter.doFilter(requestWithToken(), new MockHttpServletResponse(), filterChain);
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        filter.doFilter(requestWithToken(), new MockHttpServletResponse(), filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void activeUnlockedAdminTokenEstablishesAuthentication() throws Exception {
+        Admin admin = new Admin();
+        admin.setId(1L);
+        admin.setIsActive(true);
+        admin.setAuthVersion(2L);
+        admin.setLockedUntil(LocalDateTime.now().minusMinutes(1));
+        when(jwtUtils.extractRole(TOKEN)).thenReturn("admin");
+        when(jwtUtils.extractAuthVersion(TOKEN)).thenReturn(2L);
+        when(adminRepository.findById(1L)).thenReturn(Optional.of(admin));
+
+        filter.doFilter(requestWithToken(), new MockHttpServletResponse(), filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+        assertThat(SecurityContextHolder.getContext().getAuthentication().getAuthorities())
+                .extracting(Object::toString).containsExactly("ROLE_ADMIN");
+    }
+
+    @Test
+    void staleActiveAdminTokenFailsClosed() throws Exception {
+        Admin admin = new Admin();
+        admin.setId(1L);
+        admin.setIsActive(true);
+        admin.setAuthVersion(3L);
+        when(jwtUtils.extractRole(TOKEN)).thenReturn("admin");
+        when(jwtUtils.extractAuthVersion(TOKEN)).thenReturn(2L);
+        when(adminRepository.findById(1L)).thenReturn(Optional.of(admin));
+
+        filter.doFilter(requestWithToken(), new MockHttpServletResponse(), filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void missingAdminAndLockedUserTokensFailClosed() throws Exception {
+        when(jwtUtils.extractRole(TOKEN)).thenReturn("admin");
+        when(jwtUtils.extractAuthVersion(TOKEN)).thenReturn(2L);
+        when(adminRepository.findById(1L)).thenReturn(Optional.empty());
+        filter.doFilter(requestWithToken(), new MockHttpServletResponse(), filterChain);
+
+        when(jwtUtils.extractRole(TOKEN)).thenReturn("user");
+        User locked = activeUser(2L);
+        locked.setLockedUntil(LocalDateTime.now().plusMinutes(1));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(locked));
         filter.doFilter(requestWithToken(), new MockHttpServletResponse(), filterChain);
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();

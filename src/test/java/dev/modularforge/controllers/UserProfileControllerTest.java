@@ -7,6 +7,7 @@ import dev.modularforge.profile.UserProfileController;
 import tools.jackson.databind.ObjectMapper;
 import dev.modularforge.admin.dto.ChangePasswordRequest;
 import dev.modularforge.profile.dto.DeactivateAccountRequest;
+import dev.modularforge.profile.dto.ChangeEmailRequest;
 import dev.modularforge.profile.dto.UpdateUserProfileRequest;
 import dev.modularforge.profile.dto.UserProfileDTO;
 import dev.modularforge.profile.UserProfileService;
@@ -92,6 +93,21 @@ class UserProfileControllerTest extends BaseControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Password changed successfully"));
+    }
+
+    @Test
+    void changeEmailReturnsVerificationMessage() throws Exception {
+        ChangeEmailRequest request = new ChangeEmailRequest("CurrentPass1!", "new@example.com");
+
+        mockMvc.perform(post("/api/v1/profile/change-email")
+                        .principal(makeUserAuth(1L))
+                        .with(authentication(makeUserAuth(1L)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value(
+                        "Verification email sent to new@example.com. Please click the link to confirm the change."));
     }
 
     @Test

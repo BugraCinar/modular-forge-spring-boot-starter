@@ -1,6 +1,5 @@
 package dev.modularforge.services;
 
-import dev.modularforge.identity.model.User;
 import dev.modularforge.ratelimit.RateLimitService;
 import dev.modularforge.ratelimit.RateLimitStore;
 
@@ -99,5 +98,49 @@ class RateLimitServiceTest {
                 .when(rateLimitStore).incrementWithTtl(eq("login_rate_limit:1.2.3.4"), anyLong());
 
         assertThat(failOpenService.isLoginRateLimitExceeded("1.2.3.4")).isFalse();
+    }
+
+    @Test
+    void appliesEmailVerificationLimit() {
+        when(rateLimitConfig.getEmailVerificationAttempts()).thenReturn(2);
+        when(rateLimitConfig.getEmailVerificationWindow()).thenReturn(30_000L);
+        when(rateLimitStore.incrementWithTtl("email_verification_rate_limit:user@example.com", 30_000L))
+                .thenReturn(3L);
+
+        assertThat(rateLimitService.isEmailVerificationRateLimitExceeded("user@example.com")).isTrue();
+    }
+
+    @Test
+    void reportsFullAllowanceWhenCounterDoesNotExist() {
+        when(rateLimitStore.getCount("new-key")).thenReturn(null);
+
+        assertThat(rateLimitService.getRemainingRequests("new-key", 5)).isEqualTo(5);
+    }
+
+    @Test
+    void neverReportsNegativeRemainingRequests() {
+        when(rateLimitStore.getCount("busy-key")).thenReturn(12L);
+
+        assertThat(rateLimitService.getRemainingRequests("busy-key", 5)).isZero();
+    }
+
+    @Test
+    void remainingRequestFallbackFollowsFailurePolicy() {
+        when(rateLimitStore.getCount("broken-key")).thenThrow(new IllegalStateException("redis unavailable"));
+        RateLimitService failOpenService = new RateLimitService(rateLimitConfig, rateLimitStore, true);
+
+        assertThat(rateLimitService.getRemainingRequests("broken-key", 5)).isZero();
+        assertThat(failOpenService.getRemainingRequests("broken-key", 5)).isEqualTo(5);
+    }
+
+    @Test
+    void unavailableOrMissingTtlUsesUnknownSentinel() {
+        when(rateLimitStore.getTtlMillis("missing-key")).thenReturn(null);
+        when(rateLimitStore.getTtlMillis("persistent-key")).thenReturn(-1L);
+        when(rateLimitStore.getTtlMillis("broken-key")).thenThrow(new IllegalStateException("redis unavailable"));
+
+        assertThat(rateLimitService.getTTL("missing-key")).isEqualTo(-1);
+        assertThat(rateLimitService.getTTL("persistent-key")).isEqualTo(-1);
+        assertThat(rateLimitService.getTTL("broken-key")).isEqualTo(-1);
     }
 }

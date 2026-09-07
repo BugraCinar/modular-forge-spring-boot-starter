@@ -157,6 +157,48 @@ class UserProfileServiceTest {
     }
 
     @Test
+    void updateProfileAppliesEmailLastNameAndPhoneWhenAvailable() {
+        UpdateUserProfileRequest request = new UpdateUserProfileRequest();
+        request.setEmail("new@test.com");
+        request.setLastName("Updated");
+        request.setPhone("+905551112233");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(activeUser));
+        when(userRepository.existsByEmail("new@test.com")).thenReturn(false);
+        when(adminRepository.existsByEmail("new@test.com")).thenReturn(false);
+        when(userRepository.save(activeUser)).thenReturn(activeUser);
+
+        UserProfileDTO result = userProfileService.updateProfile(1L, request);
+
+        assertThat(result.getEmail()).isEqualTo("new@test.com");
+        assertThat(result.getLastName()).isEqualTo("Updated");
+        assertThat(result.getPhone()).isEqualTo("+905551112233");
+    }
+
+    @Test
+    void updateProfileRejectsEmailOwnedByAdmin() {
+        UpdateUserProfileRequest request = new UpdateUserProfileRequest();
+        request.setEmail("admin@test.com");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(activeUser));
+        when(userRepository.existsByEmail("admin@test.com")).thenReturn(false);
+        when(adminRepository.existsByEmail("admin@test.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> userProfileService.updateProfile(1L, request))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void profilePictureLookupAndNullUserTypeMappingAreSupported() {
+        activeUser.setProfilePicture("https://cdn.example.com/profile.jpg");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(activeUser));
+
+        assertThat(userProfileService.getProfilePictureUrl(1L))
+                .isEqualTo("https://cdn.example.com/profile.jpg");
+
+        activeUser.setUserType(null);
+        assertThat(userProfileService.mapToDTO(activeUser).getUserType()).isNull();
+    }
+
+    @Test
     @DisplayName("changePassword → throws when confirmPassword doesn't match")
     void changePassword_mismatch_throws() {
         ChangePasswordRequest req = new ChangePasswordRequest("OldPass1!", "NewPass1!", "WrongConfirm!");
@@ -295,6 +337,18 @@ class UserProfileServiceTest {
     }
 
     @Test
+    void requestEmailChangeRejectsAnAddressOwnedByAnAdmin() {
+        ChangeEmailRequest req = new ChangeEmailRequest("CorrectPass1!", "admin@example.com");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(activeUser));
+        when(passwordService.verifyPassword("CorrectPass1!", "salt", "hash")).thenReturn(true);
+        when(userRepository.existsByEmail("admin@example.com")).thenReturn(false);
+        when(adminRepository.existsByEmail("admin@example.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> userProfileService.requestEmailChange(1L, req))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
     @DisplayName("requestEmailChange → success: sets pendingEmail, saves token, sends email")
     void requestEmailChange_success_setsPendingEmailAndSendsEmail() {
         ChangeEmailRequest req = new ChangeEmailRequest("CorrectPass1!", "new@example.com");
@@ -320,5 +374,20 @@ class UserProfileServiceTest {
                         && "raw-emai...token".equals(t.getStoredToken())));
         verify(emailService).sendEmailChangeVerificationEmail(
                 eq("new@example.com"), eq("raw-email-change-token"), anyString());
+    }
+
+    @Test
+    void requestEmailChangeUsesUsernameWhenFirstNameIsMissing() {
+        activeUser.setFirstName(null);
+        ChangeEmailRequest req = new ChangeEmailRequest("CorrectPass1!", "new@example.com");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(activeUser));
+        when(passwordService.verifyPassword("CorrectPass1!", "salt", "hash")).thenReturn(true);
+        when(tokenHashService.generateToken()).thenReturn("raw-token");
+        when(tokenHashService.hashToken("raw-token")).thenReturn("hash-token");
+        when(tokenHashService.preview("raw-token")).thenReturn("preview");
+
+        userProfileService.requestEmailChange(1L, req);
+
+        verify(emailService).sendEmailChangeVerificationEmail("new@example.com", "raw-token", "testUser");
     }
 }

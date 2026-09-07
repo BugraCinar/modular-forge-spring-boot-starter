@@ -149,4 +149,33 @@ class AccountCleanupScheduledServiceTest {
         verify(refreshTokenRepository).revokeAllUserTokens(10L, "user");
         verify(refreshTokenRepository).revokeAllUserTokens(11L, "user");
     }
+
+    @Test
+    void blankProfilePictureSkipsImageStorage() {
+        User user = buildExpiredUser(12L, " ");
+        when(userRepository.findByIsActiveFalseAndAdminDeactivatedFalseAndAnonymisedAtIsNullAndDeactivatedAtBefore(any()))
+                .thenReturn(List.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+
+        accountCleanupScheduledService.anonymiseExpiredAccounts();
+
+        verifyNoInteractions(imageStorage);
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void oneBrokenAccountDoesNotStopTheRemainingBatch() {
+        User broken = buildExpiredUser(13L, null);
+        User healthy = buildExpiredUser(14L, null);
+        when(userRepository.findByIsActiveFalseAndAdminDeactivatedFalseAndAnonymisedAtIsNullAndDeactivatedAtBefore(any()))
+                .thenReturn(List.of(broken, healthy));
+        when(refreshTokenRepository.revokeAllUserTokens(13L, "user"))
+                .thenThrow(new IllegalStateException("database error"));
+        when(userRepository.save(healthy)).thenReturn(healthy);
+
+        accountCleanupScheduledService.anonymiseExpiredAccounts();
+
+        verify(userRepository, never()).save(broken);
+        verify(userRepository).save(healthy);
+    }
 }

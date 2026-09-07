@@ -329,9 +329,7 @@ public class GlobalExceptionHandler {
                     if (userInfo.userId == null) {
                         userInfo.userId = jwtUtils.extractUserIdAsLong(token);
                     }
-                    if (userInfo.role == null) {
-                        userInfo.role = jwtUtils.extractRole(token);
-                    }
+                    userInfo.role = jwtUtils.extractRole(token);
                 } catch (Exception e) {
                     log.debug("Could not extract user info from JWT token: {}", e.getMessage());
                 }
@@ -361,8 +359,7 @@ public class GlobalExceptionHandler {
                lowerUri.endsWith(".xml") ||
                lowerUri.endsWith(".yml") ||
                lowerUri.endsWith(".yaml") ||
-               lowerUri.endsWith("web.config") ||
-               lowerUri.contains("/.git/");
+               lowerUri.endsWith("web.config");
     }
 
 }

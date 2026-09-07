@@ -213,4 +213,16 @@ class AdminUserManagementControllerTest extends BaseControllerTest {
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.id").value(10));
         }
+
+        @Test
+        void toggleEmailVerifiedReturnsUpdatedUser() throws Exception {
+                when(adminUserManagementService.toggleEmailVerified(any(), eq(10L), any()))
+                                .thenReturn(sampleDTO());
+
+                mockMvc.perform(post("/api/v1/admin/users/10/toggle-email-verified")
+                                .principal(makeAdminAuth(1L))
+                                .with(authentication(makeAdminAuth(1L))))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.id").value(10));
+        }
 }

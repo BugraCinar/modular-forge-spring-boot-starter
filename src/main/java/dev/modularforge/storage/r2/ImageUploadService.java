@@ -16,7 +16,6 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
@@ -111,9 +110,10 @@ public class ImageUploadService implements ProfileImageStorage {
                 return null;
             }
         }
-        try (InputStream is = file.getInputStream()) {
-            byte[] header = new byte[12];
-            int bytesRead = is.read(header);
+        try {
+            byte[] content = file.getBytes();
+            int bytesRead = Math.min(content.length, 12);
+            byte[] header = Arrays.copyOf(content, 12);
             if (bytesRead < 2) {
                 log.warn("Rejected file upload: file too small (less than 2 bytes)");
                 return null; // Too small to be a valid file
@@ -130,7 +130,7 @@ public class ImageUploadService implements ProfileImageStorage {
             if (bytesRead >= 12 && startsWith(header, MAGIC_RIFF) && regionMatches(header, 8, MAGIC_WEBP)) {
                 return "image/webp";
             }
-            if (bytesRead >= 2 && startsWith(header, MAGIC_BMP)) {
+            if (startsWith(header, MAGIC_BMP)) {
                 return "image/bmp";
             }
 
@@ -218,9 +218,6 @@ public class ImageUploadService implements ProfileImageStorage {
                 throw new IllegalArgumentException("Image URL is outside the configured storage path");
             }
             String key = candidatePath.substring(basePath.length());
-            if (key.startsWith("/")) {
-                key = key.substring(1);
-            }
             if (!key.matches("^profiles/(user|admin)/[A-Za-z0-9._-]+$")) {
                 throw new IllegalArgumentException("Image URL has an invalid object key");
             }

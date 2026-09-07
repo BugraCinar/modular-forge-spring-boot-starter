@@ -61,9 +61,7 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
                     if (userId == null) {
                         userId = jwtUtils.extractUserIdAsLong(token);
                     }
-                    if (role == null) {
-                        role = jwtUtils.extractRole(token);
-                    }
+                    role = jwtUtils.extractRole(token);
                 } catch (Exception e) {
                     logger.debug("Could not extract user info from JWT token", e);
                 }
@@ -120,8 +118,7 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
                lowerUri.endsWith(".xml") ||
                lowerUri.endsWith(".yml") ||
                lowerUri.endsWith(".yaml") ||
-               lowerUri.endsWith("web.config") ||
-               lowerUri.contains("/.git/");
+               lowerUri.endsWith("web.config");
     }
 
 }
