@@ -12,6 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@org.springframework.data.mongodb.core.mapping.Document(collection = "admins")
 @Table(name = "admins", indexes = {
     @Index(name = "idx_admin_email", columnList = "email"),
     @Index(name = "idx_admin_username", columnList = "username"),
@@ -22,14 +23,20 @@ import java.util.List;
 })
 public class Admin {
 
+    @Version
+    @Column(name = "row_version", nullable = false)
+    private Long rowVersion;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "username", unique = true, nullable = false, length = 50)
+    @org.springframework.data.mongodb.core.index.Indexed(unique = true, sparse = true)
     private String username;
 
     @Column(name = "email", unique = true, nullable = false, length = 255)
+    @org.springframework.data.mongodb.core.index.Indexed(unique = true, sparse = true)
     private String email;
 
     @JsonIgnore

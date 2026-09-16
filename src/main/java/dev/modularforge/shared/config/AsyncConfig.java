@@ -1,7 +1,5 @@
 package dev.modularforge.shared.config;
 
-import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.User;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;

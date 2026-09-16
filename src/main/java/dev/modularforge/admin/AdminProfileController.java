@@ -3,7 +3,7 @@ package dev.modularforge.admin;
 import dev.modularforge.identity.model.Admin;
 
 import dev.modularforge.admin.dto.AdminProfileDTO;
-import dev.modularforge.admin.dto.ChangePasswordRequest;
+import dev.modularforge.shared.dto.ChangePasswordRequest;
 import dev.modularforge.admin.dto.UpdateAdminProfileRequest;
 import dev.modularforge.admin.AdminProfileService;
 import jakarta.validation.Valid;
@@ -27,6 +27,16 @@ public class AdminProfileController {
 
     @Autowired
     private AdminProfileService adminProfileService;
+    @Autowired
+    private dev.modularforge.auth.EmailChangeService emailChanges;
+
+    @PostMapping("/change-email")
+    public ResponseEntity<Map<String, Object>> changeEmail(
+            @Valid @RequestBody dev.modularforge.shared.dto.ChangeEmailRequest request,
+            Authentication authentication) {
+        emailChanges.request((Long) authentication.getDetails(), "admin", request.getCurrentPassword(), request.getNewEmail());
+        return ResponseEntity.ok(Map.of("success", true, "message", "Verification email sent"));
+    }
     @GetMapping
     public ResponseEntity<AdminProfileDTO> getAdminProfile(Authentication authentication) {
         Long adminId = (Long) authentication.getDetails();

@@ -1,7 +1,5 @@
 package dev.modularforge.audit;
 
-import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.Role;
 import dev.modularforge.shared.PaginationUtils;
 
 import dev.modularforge.audit.dto.UserActivityLogDTO;
@@ -10,18 +8,15 @@ import dev.modularforge.identity.model.User;
 import dev.modularforge.audit.UserActivityLog;
 import dev.modularforge.identity.UserRepository;
 import dev.modularforge.audit.UserActivityLogRepository;
-import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -61,9 +56,8 @@ public class UserActivityLogService {
         Sort.Direction direction = sortDirection.equalsIgnoreCase("asc") ?
                 Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PaginationUtils.pageRequest(page, size, Sort.by(direction, validatedSortBy));
-        Specification<UserActivityLog> spec = buildSpecification(userId, role, action, resourceType, success, startDate, endDate, ipAddress);
-
-        Page<UserActivityLog> logPage = userActivityLogRepository.findAll(spec, pageable);
+        Page<UserActivityLog> logPage = userActivityLogRepository.findWithFilters(userId, blankToNull(role == null ? null : role.toLowerCase(java.util.Locale.ROOT)),
+                blankToNull(action), blankToNull(resourceType), success, startDate, endDate, blankToNull(ipAddress), pageable);
 
         Map<Long, User> usersById = loadUsers(logPage.getContent());
         List<UserActivityLogDTO> logDTOs = logPage.getContent().stream()
@@ -176,12 +170,7 @@ public class UserActivityLogService {
     }
     @Transactional
     public int deleteOldActivityLogs(LocalDateTime beforeDate) {
-        List<UserActivityLog> oldLogs = userActivityLogRepository.findAll(
-                (root, query, cb) -> cb.lessThan(root.get("createdAt"), beforeDate)
-        );
-
-        int count = oldLogs.size();
-        userActivityLogRepository.deleteAll(oldLogs);
+        int count = userActivityLogRepository.deleteByCreatedAtBefore(beforeDate);
 
         log.info("Deleted {} old user activity logs before date: {}", count, beforeDate);
         return count;
@@ -199,48 +188,10 @@ public class UserActivityLogService {
 
         return stats;
     }
-    private Specification<UserActivityLog> buildSpecification(
-            Long userId, String role, String action, String resourceType,
-            Boolean success, LocalDateTime startDate, LocalDateTime endDate, String ipAddress
-    ) {
-        return (root, query, criteriaBuilder) -> {
-            List<Predicate> predicates = new ArrayList<>();
-
-            if (userId != null) {
-                predicates.add(criteriaBuilder.equal(root.get("userId"), userId));
-            }
-
-            if (role != null && !role.isEmpty()) {
-                predicates.add(criteriaBuilder.equal(criteriaBuilder.lower(root.get("role")), role.toLowerCase()));
-            }
-
-            if (action != null && !action.isEmpty()) {
-                predicates.add(criteriaBuilder.equal(root.get("action"), action));
-            }
-
-            if (resourceType != null && !resourceType.isEmpty()) {
-                predicates.add(criteriaBuilder.equal(root.get("resourceType"), resourceType));
-            }
-
-            if (success != null) {
-                predicates.add(criteriaBuilder.equal(root.get("success"), success));
-            }
-
-            if (startDate != null) {
-                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), startDate));
-            }
-
-            if (endDate != null) {
-                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("createdAt"), endDate));
-            }
-
-            if (ipAddress != null && !ipAddress.isEmpty()) {
-                predicates.add(criteriaBuilder.equal(root.get("ipAddress"), ipAddress));
-            }
-
-            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
-        };
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
+
     private UserActivityLogDTO convertToDTO(UserActivityLog log) {
         return convertToDTO(log, loadUsers(List.of(log)));
     }

@@ -139,7 +139,7 @@ class AuthServiceExtendedTest {
         when(passwords.verifyPassword("correct", "salt", "hash")).thenReturn(true);
         when(secondFactor.beginChallenge(20L)).thenReturn(Optional.empty());
         when(jwtUtils.generateAdminToken("root", 20L, 0, 0L)).thenReturn("jwt");
-        when(refreshTokens.createRefreshToken(20L, "admin", request)).thenReturn(new RefreshToken(20L, "admin", 30L));
+        when(refreshTokens.createRefreshToken(20L, "admin", 0L, request)).thenReturn(new RefreshToken(20L, "admin", 30L));
         LoginRequest login = new LoginRequest("root", "correct", null, null);
         assertThat(service.login(login, request).isSuccess()).isTrue();
 
@@ -169,7 +169,7 @@ class AuthServiceExtendedTest {
 
         when(passwords.verifyPassword("correct", "salt", "hash")).thenReturn(true);
         when(jwtUtils.generateUserToken("alice", 10L, "app_user", 0L)).thenReturn("jwt");
-        when(refreshTokens.createRefreshToken(10L, "user", request)).thenReturn(new RefreshToken(10L, "user", 30L));
+        when(refreshTokens.createRefreshToken(10L, "user", 0L, request)).thenReturn(new RefreshToken(10L, "user", 30L));
         assertThat(service.login(new LoginRequest("alice", "correct", "user", null), request).getMessage()).contains("reactivated");
         assertThat(user.getIsActive()).isTrue();
     }
@@ -181,7 +181,7 @@ class AuthServiceExtendedTest {
         when(admins.findByUsernameOrEmail("root", "root")).thenReturn(Optional.of(admin));
         when(passwords.verifyPassword("pass", "salt", "hash")).thenReturn(true);
         when(jwtUtils.generateAdminToken("root", 20L, 0, 0L)).thenReturn("jwt");
-        when(refreshTokens.createRefreshToken(20L, "admin", request)).thenReturn(new RefreshToken(20L, "admin", 30L));
+        when(refreshTokens.createRefreshToken(20L, "admin", 0L, request)).thenReturn(new RefreshToken(20L, "admin", 30L));
 
         assertThat(service.login(new LoginRequest("root", "pass", "ADMIN", null), request).isSuccess()).isTrue();
     }
@@ -193,7 +193,7 @@ class AuthServiceExtendedTest {
         when(users.findByUsernameOrEmail("alice", "alice")).thenReturn(Optional.of(user));
         when(passwords.verifyPassword("pass", "salt", "hash")).thenReturn(true);
         when(jwtUtils.generateUserToken("alice", 10L, "app_user", 0L)).thenReturn("jwt");
-        when(refreshTokens.createRefreshToken(10L, "user", request)).thenReturn(new RefreshToken(10L, "user", 30L));
+        when(refreshTokens.createRefreshToken(10L, "user", 0L, request)).thenReturn(new RefreshToken(10L, "user", 30L));
         assertThat(service.login(new LoginRequest("alice", "pass", "user", null), request).isSuccess()).isTrue();
 
         Admin admin = admin(20L);
@@ -201,7 +201,7 @@ class AuthServiceExtendedTest {
         when(admins.findByUsernameOrEmail("root", "root")).thenReturn(Optional.of(admin));
         when(secondFactor.beginChallenge(20L)).thenReturn(Optional.empty());
         when(jwtUtils.generateAdminToken("root", 20L, 0, 0L)).thenReturn("admin-jwt");
-        when(refreshTokens.createRefreshToken(20L, "admin", request)).thenReturn(new RefreshToken(20L, "admin", 30L));
+        when(refreshTokens.createRefreshToken(20L, "admin", 0L, request)).thenReturn(new RefreshToken(20L, "admin", 30L));
         assertThat(service.login(new LoginRequest("root", "pass", "admin", null), request).isSuccess()).isTrue();
     }
 
@@ -425,52 +425,13 @@ class AuthServiceExtendedTest {
     }
 
     @Test
-    void verifiesEmailChangeAndCleansInvalidState() {
-        assertThatThrownBy(() -> service.verifyEmailChange("missing")).isInstanceOf(BadRequestException.class);
-
-        VerificationToken wrongType = verificationToken(10L, "user");
-        when(verificationTokens.findByTokenHash("hash-wrong")).thenReturn(Optional.of(wrongType));
-        assertThatThrownBy(() -> service.verifyEmailChange("wrong")).isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("type");
-
-        VerificationToken expired = verificationToken(10L, "email_change");
-        expired.setExpiryDate(LocalDateTime.now().minusMinutes(1));
-        when(verificationTokens.findByTokenHash("hash-expired-change")).thenReturn(Optional.of(expired));
-        assertThatThrownBy(() -> service.verifyEmailChange("expired-change")).isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("expired");
-
-        VerificationToken missingUser = verificationToken(99L, "email_change");
-        when(verificationTokens.findByTokenHash("hash-missing-user")).thenReturn(Optional.of(missingUser));
-        when(users.findById(99L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.verifyEmailChange("missing-user")).isInstanceOf(ResourceNotFoundException.class);
-
-        User user = user(10L);
-        VerificationToken change = verificationToken(10L, "email_change");
-        when(users.findById(10L)).thenReturn(Optional.of(user));
-        when(verificationTokens.findByTokenHash("hash-change")).thenReturn(Optional.of(change));
-        user.setPendingEmail(null);
-        assertThatThrownBy(() -> service.verifyEmailChange("change")).isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("pending");
-        user.setPendingEmail(" ");
-        assertThatThrownBy(() -> service.verifyEmailChange("change")).isInstanceOf(BadRequestException.class);
-
-        user.setPendingEmail("taken@example.com");
-        when(users.existsByEmail("taken@example.com")).thenReturn(true);
-        assertThatThrownBy(() -> service.verifyEmailChange("change")).isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("already in use");
-        assertThat(user.getPendingEmail()).isNull();
-
-        user.setPendingEmail("admin-taken@example.com");
-        when(users.existsByEmail("admin-taken@example.com")).thenReturn(false);
-        when(admins.existsByEmail("admin-taken@example.com")).thenReturn(true);
-        assertThatThrownBy(() -> service.verifyEmailChange("change")).isInstanceOf(BadRequestException.class);
-
-        user.setPendingEmail("new@example.com");
-        when(users.existsByEmail("new@example.com")).thenReturn(false);
-        when(admins.existsByEmail("new@example.com")).thenReturn(false);
+    void verifiesEmailChangeThroughSharedFlow() {
+        var changes = org.mockito.Mockito.mock(EmailChangeService.class);
+        ReflectionTestUtils.setField(service, "emailChanges", changes);
         assertThat(service.verifyEmailChange("change")).containsEntry("success", true);
-        assertThat(user.getEmail()).isEqualTo("new@example.com");
-        assertThat(user.getPendingEmail()).isNull();
+        verify(changes).confirm("change");
+        doThrow(new BadRequestException("Invalid token")).when(changes).confirm("invalid");
+        assertThatThrownBy(() -> service.verifyEmailChange("invalid")).isInstanceOf(BadRequestException.class);
     }
 
     private RegisterRequest registration() {

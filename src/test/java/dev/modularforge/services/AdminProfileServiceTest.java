@@ -5,7 +5,7 @@ import dev.modularforge.auth.PasswordService;
 import dev.modularforge.auth.token.RefreshTokenService;
 
 import dev.modularforge.admin.dto.AdminProfileDTO;
-import dev.modularforge.admin.dto.ChangePasswordRequest;
+import dev.modularforge.shared.dto.ChangePasswordRequest;
 import dev.modularforge.admin.dto.UpdateAdminProfileRequest;
 import dev.modularforge.shared.error.BadRequestException;
 import dev.modularforge.shared.error.ResourceNotFoundException;
@@ -97,11 +97,10 @@ class AdminProfileServiceTest {
         UpdateAdminProfileRequest req = new UpdateAdminProfileRequest();
         req.setEmail("taken@test.com");
         when(adminRepository.findById(1L)).thenReturn(Optional.of(admin));
-        when(adminRepository.existsByEmail("taken@test.com")).thenReturn(true);
 
         assertThatThrownBy(() -> adminProfileService.updateAdminProfile(1L, req))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("Email");
+                .hasMessageContaining("email");
     }
 
     @Test
@@ -138,20 +137,14 @@ class AdminProfileServiceTest {
     }
 
     @Test
-    void updateAdminProfileAppliesAvailableEmailAndProfilePicture() {
+    void updateAdminProfileRejectsArbitraryProfilePicture() {
         Admin admin = makeAdmin(1L, 1);
         UpdateAdminProfileRequest request = new UpdateAdminProfileRequest();
-        request.setEmail("new-admin@test.com");
-        request.setProfilePicture("https://img.example.com/new.jpg");
+        request.setProfilePicture("https://img.example.com/another-account.jpg");
         when(adminRepository.findById(1L)).thenReturn(Optional.of(admin));
-        when(adminRepository.existsByEmail("new-admin@test.com")).thenReturn(false);
-        when(userRepository.existsByEmail("new-admin@test.com")).thenReturn(false);
-        when(adminRepository.save(admin)).thenReturn(admin);
-
-        AdminProfileDTO result = adminProfileService.updateAdminProfile(1L, request);
-
-        assertThat(result.getEmail()).isEqualTo("new-admin@test.com");
-        assertThat(result.getProfilePicture()).isEqualTo("https://img.example.com/new.jpg");
+        assertThatThrownBy(() -> adminProfileService.updateAdminProfile(1L, request))
+                .isInstanceOf(BadRequestException.class).hasMessageContaining("upload");
+        verify(adminRepository, never()).save(any());
     }
 
     @Test
@@ -160,8 +153,6 @@ class AdminProfileServiceTest {
         UpdateAdminProfileRequest request = new UpdateAdminProfileRequest();
         request.setEmail("user@test.com");
         when(adminRepository.findById(1L)).thenReturn(Optional.of(admin));
-        when(adminRepository.existsByEmail("user@test.com")).thenReturn(false);
-        when(userRepository.existsByEmail("user@test.com")).thenReturn(true);
 
         assertThatThrownBy(() -> adminProfileService.updateAdminProfile(1L, request))
                 .isInstanceOf(BadRequestException.class);
@@ -405,4 +396,21 @@ class AdminProfileServiceTest {
                 99L, "https://img.example.com/pic.jpg"))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
+
+    @Test void profileKeepsAnUnchangedImageAndHierarchyRejectsSelfPeersAndHigherLevels() {
+        Admin actor = makeAdmin(1L, 1); Admin target = makeAdmin(2L, 2);
+        actor.setProfilePicture("stored-url");
+        when(adminRepository.findById(1L)).thenReturn(Optional.of(actor));
+        when(adminRepository.save(actor)).thenReturn(actor);
+        UpdateAdminProfileRequest profile = new UpdateAdminProfileRequest(); profile.setProfilePicture("stored-url");
+        adminProfileService.updateAdminProfile(1L, profile);
+        assertThatThrownBy(() -> adminProfileService.reactivateAccount(1L, 1L)).isInstanceOf(BadRequestException.class);
+        when(adminRepository.findById(2L)).thenReturn(Optional.of(target));
+        adminProfileService.reactivateAccount(2L, 1L);
+        target.setLevel(1);
+        assertThatThrownBy(() -> adminProfileService.reactivateAccount(2L, 1L)).isInstanceOf(BadRequestException.class);
+        actor.setLevel(2);
+        assertThatThrownBy(() -> adminProfileService.reactivateAccount(2L, 1L)).isInstanceOf(BadRequestException.class);
+    }
+
 }

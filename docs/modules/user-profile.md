@@ -13,3 +13,7 @@ It owns self-service profile, password/email change, deactivation, anonymization
 5. Remove profile-only configuration and the catalog entry.
 6. Keep identity fields used by auth/admin. Remove profile-only columns through an explicit migration only after searching all consumers.
 7. Run `./mvnw clean verify`.
+
+## Persistence and security behavior
+
+Email changes delegate to `auth.EmailChangeService`: request with current password, confirm at the new address, then log in again. Profile PUT rejects a different email. Shared email/password request DTOs live in `shared.dto` so removing this feature does not break admin routes.

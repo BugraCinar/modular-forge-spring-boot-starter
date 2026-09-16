@@ -1,6 +1,5 @@
 package dev.modularforge.audit.dto;
 
-import dev.modularforge.identity.model.Role;
 
 import dev.modularforge.audit.AuthenticationErrorLog;
 import lombok.AllArgsConstructor;

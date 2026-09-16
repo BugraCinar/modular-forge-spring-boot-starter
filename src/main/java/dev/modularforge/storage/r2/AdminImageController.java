@@ -1,6 +1,5 @@
 package dev.modularforge.storage.r2;
 
-import dev.modularforge.security.AdminLevelAuthorizationService;
 import dev.modularforge.identity.model.Admin;
 
 import dev.modularforge.security.JwtUtils;
@@ -34,7 +33,7 @@ public class AdminImageController {
             @RequestParam("file") MultipartFile file,
             @RequestHeader("Authorization") String token) {
         try {
-            Long adminId = jwtUtils.extractUserId(token.substring(7)).longValue();
+            Long adminId = jwtUtils.extractUserIdAsLong(token.substring(7));
 
             String imageUrl = imageUploadService.uploadProfileImage(file, "ADMIN", adminId);
             adminProfileService.updateProfilePicture(adminId, imageUrl);
@@ -62,11 +61,11 @@ public class AdminImageController {
             @RequestParam("file") MultipartFile file,
             @RequestHeader("Authorization") String token) {
         try {
-            Long adminId = jwtUtils.extractUserId(token.substring(7)).longValue();
+            Long adminId = jwtUtils.extractUserIdAsLong(token.substring(7));
             String oldImageUrl = adminProfileService.getAdminProfile(adminId).getProfilePicture();
             String imageUrl = imageUploadService.uploadProfileImage(file, "ADMIN", adminId);
             adminProfileService.updateProfilePicture(adminId, imageUrl);
-            deleteOldImageAfterSuccessfulReplacement(oldImageUrl, imageUrl);
+            deleteOldImageAfterSuccessfulReplacement(oldImageUrl, imageUrl, adminId);
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
@@ -87,12 +86,12 @@ public class AdminImageController {
         }
     }
 
-    private void deleteOldImageAfterSuccessfulReplacement(String oldImageUrl, String newImageUrl) {
+    private void deleteOldImageAfterSuccessfulReplacement(String oldImageUrl, String newImageUrl, Long ownerId) {
         if (oldImageUrl == null || oldImageUrl.isBlank() || oldImageUrl.equals(newImageUrl)) {
             return;
         }
         try {
-            imageUploadService.deleteImage(oldImageUrl);
+            imageUploadService.deleteProfileImage(oldImageUrl, "admin", ownerId);
         } catch (Exception e) {
             log.warn("Could not delete replaced admin profile image: {}", oldImageUrl, e);
         }
@@ -102,7 +101,7 @@ public class AdminImageController {
             @RequestParam("imageUrl") String imageUrl,
             @RequestHeader("Authorization") String token) {
         try {
-            Long adminId = jwtUtils.extractUserId(token.substring(7)).longValue();
+            Long adminId = jwtUtils.extractUserIdAsLong(token.substring(7));
             if (!adminProfileService.verifyProfileImageOwnership(adminId, imageUrl)) {
                 log.warn("Admin {} attempted to delete profile image they don't own: {}", adminId, imageUrl);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
@@ -111,7 +110,7 @@ public class AdminImageController {
                 ));
             }
 
-            imageUploadService.deleteImage(imageUrl);
+            imageUploadService.deleteProfileImage(imageUrl, "admin", adminId);
             adminProfileService.updateProfilePicture(adminId, null);
 
             return ResponseEntity.ok(Map.of(

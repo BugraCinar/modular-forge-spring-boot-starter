@@ -44,7 +44,7 @@ class ImageControllersCoverageTest {
 
     @Test
     void adminUploadMapsSuccessValidationAndUnexpectedFailures() throws Exception {
-        when(jwtUtils.extractUserId("jwt")).thenReturn(7);
+        when(jwtUtils.extractUserIdAsLong("jwt")).thenReturn(7L);
         when(images.uploadProfileImage(file, "ADMIN", 7L)).thenReturn("new-url");
         assertThat(adminController.uploadProfileImage(file, "Bearer jwt").getStatusCode()).isEqualTo(HttpStatus.OK);
 
@@ -58,22 +58,22 @@ class ImageControllersCoverageTest {
 
     @Test
     void adminUpdateCleansOldImageAndToleratesCleanupFailure() throws Exception {
-        when(jwtUtils.extractUserId("jwt")).thenReturn(7);
+        when(jwtUtils.extractUserIdAsLong("jwt")).thenReturn(7L);
         AdminProfileDTO profile = new AdminProfileDTO();
         profile.setProfilePicture("old-url");
         when(adminProfiles.getAdminProfile(7L)).thenReturn(profile);
         when(images.uploadProfileImage(file, "ADMIN", 7L)).thenReturn("new-url");
 
         assertThat(adminController.updateProfileImage(file, "Bearer jwt").getStatusCode()).isEqualTo(HttpStatus.OK);
-        verify(images).deleteImage("old-url");
+        verify(images).deleteProfileImage("old-url", "admin", 7L);
 
-        doThrow(new IllegalStateException("delete failed")).when(images).deleteImage("old-url");
+        doThrow(new IllegalStateException("delete failed")).when(images).deleteProfileImage("old-url", "admin", 7L);
         assertThat(adminController.updateProfileImage(file, "Bearer jwt").getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
     void adminUpdateSkipsMissingBlankAndSameOldImagesAndMapsErrors() throws Exception {
-        when(jwtUtils.extractUserId("jwt")).thenReturn(7);
+        when(jwtUtils.extractUserIdAsLong("jwt")).thenReturn(7L);
         when(images.uploadProfileImage(file, "ADMIN", 7L)).thenReturn("new-url");
         AdminProfileDTO profile = new AdminProfileDTO();
         when(adminProfiles.getAdminProfile(7L)).thenReturn(profile);
@@ -83,7 +83,7 @@ class ImageControllersCoverageTest {
         assertThat(adminController.updateProfileImage(file, "Bearer jwt").getStatusCode()).isEqualTo(HttpStatus.OK);
         profile.setProfilePicture("new-url");
         assertThat(adminController.updateProfileImage(file, "Bearer jwt").getStatusCode()).isEqualTo(HttpStatus.OK);
-        verify(images, never()).deleteImage(anyString());
+        verify(images, never()).deleteProfileImage(anyString(), anyString(), anyLong());
 
         doThrow(new IllegalArgumentException("bad")).when(images).uploadProfileImage(file, "ADMIN", 7L);
         assertThat(adminController.updateProfileImage(file, "Bearer jwt").getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -94,7 +94,7 @@ class ImageControllersCoverageTest {
 
     @Test
     void adminDeleteEnforcesOwnershipAndMapsFailures() throws Exception {
-        when(jwtUtils.extractUserId("jwt")).thenReturn(7);
+        when(jwtUtils.extractUserIdAsLong("jwt")).thenReturn(7L);
         when(adminProfiles.verifyProfileImageOwnership(7L, "url")).thenReturn(false, true);
         assertThat(adminController.deleteProfileImage("url", "Bearer jwt").getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(adminController.deleteProfileImage("url", "Bearer jwt").getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -123,11 +123,11 @@ class ImageControllersCoverageTest {
         when(images.uploadProfileImage(file, "USER", 9L)).thenReturn("new-url");
         when(userProfiles.getProfilePictureUrl(9L)).thenReturn("old-url", null, " ", "new-url", "old-url");
         assertThat(userController.updateProfileImage(file, authentication).getStatusCode()).isEqualTo(HttpStatus.OK);
-        verify(images).deleteImage("old-url");
+        verify(images).deleteProfileImage("old-url", "user", 9L);
         assertThat(userController.updateProfileImage(file, authentication).getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(userController.updateProfileImage(file, authentication).getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(userController.updateProfileImage(file, authentication).getStatusCode()).isEqualTo(HttpStatus.OK);
-        doThrow(new IllegalStateException("cleanup")).when(images).deleteImage("old-url");
+        doThrow(new IllegalStateException("cleanup")).when(images).deleteProfileImage("old-url", "user", 9L);
         assertThat(userController.updateProfileImage(file, authentication).getStatusCode()).isEqualTo(HttpStatus.OK);
 
         reset(images, userProfiles);
@@ -147,7 +147,7 @@ class ImageControllersCoverageTest {
         assertThat(userController.deleteProfileImage("url", authentication).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(userController.deleteProfileImage("url", authentication).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(userController.deleteProfileImage("url", authentication).getStatusCode()).isEqualTo(HttpStatus.OK);
-        doThrow(new IllegalStateException("storage")).when(images).deleteImage("url");
+        doThrow(new IllegalStateException("storage")).when(images).deleteProfileImage("url", "user", 9L);
         assertThat(userController.deleteProfileImage("url", authentication).getStatusCode())
                 .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }

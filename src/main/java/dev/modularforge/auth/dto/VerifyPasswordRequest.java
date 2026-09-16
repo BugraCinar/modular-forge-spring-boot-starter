@@ -1,8 +1,6 @@
 package dev.modularforge.auth.dto;
 
-import dev.modularforge.identity.model.Admin;
 import dev.modularforge.identity.model.Role;
-import dev.modularforge.identity.model.User;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;

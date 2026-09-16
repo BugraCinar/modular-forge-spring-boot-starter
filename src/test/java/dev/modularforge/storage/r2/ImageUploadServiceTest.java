@@ -254,4 +254,17 @@ class ImageUploadServiceTest {
         }
         return result;
     }
+
+    @Test void profileDeletionRequiresAccountScopedObjectKey() {
+        for (String url : new String[]{
+                "https://cdn.example.com/profiles/user/profile_user_420_photo.png",
+                "https://cdn.example.com/profiles/admin/profile_admin_42_photo.png"}) {
+            assertThatThrownBy(() -> service.deleteProfileImage(url, "USER", 42L))
+                    .isInstanceOf(dev.modularforge.shared.error.ForbiddenException.class);
+        }
+        verify(s3Client, never()).deleteObject(any(DeleteObjectRequest.class));
+        service.deleteProfileImage("https://cdn.example.com/profiles/user/profile_user_42_photo.png", "USER", 42L);
+        verify(s3Client).deleteObject(any(DeleteObjectRequest.class));
+    }
+
 }

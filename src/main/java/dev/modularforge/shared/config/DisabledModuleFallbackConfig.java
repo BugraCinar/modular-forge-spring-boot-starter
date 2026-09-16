@@ -62,6 +62,7 @@ public class DisabledModuleFallbackConfig {
             public void sendPasswordResetEmail(String a, String b, String c) { throw unavailable(); }
             public void sendEmailChangeVerificationEmail(String a, String b, String c) { throw unavailable(); }
             public void sendSystemNotificationEmail(String a, String b) { throw unavailable(); }
+            public void sendEmailChangeNotice(String a, String b) { throw unavailable(); }
         };
     }
 }

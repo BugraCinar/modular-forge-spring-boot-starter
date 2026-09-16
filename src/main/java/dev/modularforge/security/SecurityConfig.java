@@ -1,7 +1,5 @@
 package dev.modularforge.security;
 
-import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.User;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -95,8 +93,6 @@ public class SecurityConfig {
                                 .maxAgeInSeconds(31536000)
                                 .includeSubDomains(true)
                                 .preload(true))
-                        .contentSecurityPolicy(csp -> csp.policyDirectives(
-                                "default-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"))
                         .referrerPolicy(referrerPolicy -> referrerPolicy
                                 .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                         .permissionsPolicyHeader(policy -> policy.policy(
@@ -128,6 +124,7 @@ public class SecurityConfig {
                     auth.anyRequest().authenticated();
                 })
 
+                .addFilterBefore(new CspNonceFilter(), org.springframework.security.web.header.HeaderWriterFilter.class)
                 .addFilterBefore(globalRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

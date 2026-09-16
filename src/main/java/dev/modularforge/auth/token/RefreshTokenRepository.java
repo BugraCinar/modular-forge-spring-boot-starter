@@ -1,13 +1,6 @@
 package dev.modularforge.auth.token;
 
-import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.Role;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import dev.modularforge.auth.token.RefreshToken;
@@ -16,8 +9,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-@Repository
-public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
+@org.springframework.data.repository.NoRepositoryBean
+public interface RefreshTokenRepository extends dev.modularforge.shared.persistence.EntityRepository<RefreshToken> {
 
     Optional<RefreshToken> findByToken(String token);
 
@@ -27,33 +20,23 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
 
     List<RefreshToken> findByUserIdAndRoleAndIsRevokedFalse(Long userId, String role);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
     void deleteByToken(String token);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
     void deleteByTokenHash(String tokenHash);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
     void deleteByExpiryDateBefore(LocalDateTime date);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
-    @Query("UPDATE RefreshToken rt SET rt.isRevoked = true WHERE rt.userId = :userId AND rt.role = :role AND rt.isRevoked = false")
-    int revokeAllUserTokens(@Param("userId") Long userId, @Param("role") String role);
+    int revokeAllUserTokens(Long userId, String role);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
-    @Query("UPDATE RefreshToken rt SET rt.isRevoked = true, rt.lastUsedAt = :usedAt " +
-            "WHERE rt.id = :id AND rt.isRevoked = false")
-    int revokeIfActive(@Param("id") Long id, @Param("usedAt") LocalDateTime usedAt);
+    int revokeIfActive(Long id, LocalDateTime usedAt);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
-    @Query("DELETE FROM RefreshToken rt WHERE rt.isRevoked = true OR rt.expiryDate < :date")
-    int cleanupRevokedAndExpired(@Param("date") LocalDateTime date);
+    int cleanupRevokedAndExpired(LocalDateTime date);
 
     long countByUserIdAndRole(Long userId, String role);
 
@@ -64,21 +47,13 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
 
     List<RefreshToken> findByIpAddress(String ipAddress);
 
-    @Query("SELECT rt FROM RefreshToken rt WHERE " +
-            "(:role IS NULL OR rt.role = :role) AND " +
-            "(:userId IS NULL OR rt.userId = :userId) AND " +
-            "(:isRevoked IS NULL OR rt.isRevoked = :isRevoked) AND " +
-            "(:ipAddress IS NULL OR rt.ipAddress = :ipAddress) " +
-            "ORDER BY rt.createdAt DESC")
     List<RefreshToken> findWithFilters(
-            @Param("role") String role,
-            @Param("userId") Long userId,
-            @Param("isRevoked") Boolean isRevoked,
-            @Param("ipAddress") String ipAddress);
+            String role,
+            Long userId,
+            Boolean isRevoked,
+            String ipAddress);
 
-    @Query("SELECT rt.role, COUNT(rt) FROM RefreshToken rt WHERE rt.isRevoked = false AND rt.expiryDate > :now GROUP BY rt.role")
-    List<Object[]> countActiveTokensByRole(@Param("now") LocalDateTime now);
+    List<Object[]> countActiveTokensByRole(LocalDateTime now);
 
-    @Query("SELECT COUNT(rt) FROM RefreshToken rt WHERE rt.isRevoked = false AND rt.expiryDate > :now")
-    long countAllActiveTokens(@Param("now") LocalDateTime now);
+    long countAllActiveTokens(LocalDateTime now);
 }

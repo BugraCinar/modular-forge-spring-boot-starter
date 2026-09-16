@@ -9,4 +9,5 @@ public interface NotificationGateway {
     void sendEmailChangeVerificationEmail(String to, String token, String name);
 
     void sendSystemNotificationEmail(String subject, String body);
+    void sendEmailChangeNotice(String previousEmail, String requestedEmail);
 }

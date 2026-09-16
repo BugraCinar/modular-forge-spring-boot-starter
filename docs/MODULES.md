@@ -1,6 +1,6 @@
 # Module catalog
 
-The live view is available without authentication at `GET /api/v1/modules`. Configuration values below are the source for runtime activation; Maven profiles select JDBC drivers, not feature modules.
+The live view is available without authentication at `GET /api/v1/modules`. Configuration values below are the source for runtime activation; Maven profiles select database drivers, not feature modules. SQL and MongoDB providers use the same feature repository ports; see [database selection](DATABASES.md).
 
 | Id | Kind | Default | Package | Depends on |
 |---|---|---:|---|---|
@@ -14,9 +14,10 @@ The live view is available without authentication at `GET /api/v1/modules`. Conf
 | two-factor | optional | off | `twofactor` | authentication port, identity |
 | image-storage | replaceable | off | `storage.r2` | profile storage port, AWS S3 SDK |
 | audit | optional | on | `audit` | identity, security extension, notification port |
-| database-backup | optional | off | `backup` | MySQL/MariaDB tools, email |
+| database-backup | optional | off | `backup` | MySQL/MariaDB tools, separate encryption key, email |
 | observability | optional | off | `observability` | Sentry SDK |
 | api-docs | optional | off | `observability.OpenApiConfig` | springdoc |
+| kafka | optional | off | `kafka` | shared event contract, Kafka broker |
 | seed-data | optional | off | `bootstrap` | identity |
 
 All guides are in `docs/modules/`. A configuration switch leaves code and dependencies present; a physical removal follows the corresponding guide.

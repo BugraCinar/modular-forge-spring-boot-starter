@@ -147,8 +147,8 @@ class TwoFactorAuthControllerTest extends BaseControllerTest {
 
     @Test
     void verifyLogin_invalidCode_returns401() throws Exception {
-        when(twoFactorAuthService.verifyCodeByUsername(eq("adminUser"), eq("111111"), anyString()))
-                .thenReturn(false);
+        when(twoFactorAuthService.completeLogin(eq("adminUser"), eq("111111"), anyString()))
+                .thenReturn(java.util.Optional.empty());
 
         String body = objectMapper.writeValueAsString(Map.of(
                 "username", "adminUser",
@@ -165,7 +165,7 @@ class TwoFactorAuthControllerTest extends BaseControllerTest {
 
     @Test
     void verifyLogin_serviceThrowsException_returns401() throws Exception {
-        when(twoFactorAuthService.verifyCodeByUsername(anyString(), anyString(), anyString()))
+        when(twoFactorAuthService.completeLogin(anyString(), anyString(), anyString()))
                 .thenThrow(new RuntimeException("challenge token expired"));
 
         String body = objectMapper.writeValueAsString(Map.of(
@@ -194,16 +194,16 @@ class TwoFactorAuthControllerTest extends BaseControllerTest {
         admin.setLevel(0);
         admin.setLastLoginAt(LocalDateTime.now());
         RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setIssuedAuthVersion(0L);
         refreshToken.setToken("refresh-token-12345678");
         refreshToken.setUserId(1L);
 
-        when(twoFactorAuthService.verifyCodeByUsername(eq("adminUser"), eq("123456"), eq("valid-challenge")))
-                .thenReturn(true);
-        when(twoFactorAuthService.markLoginSuccessful("adminUser")).thenReturn(admin);
+        when(twoFactorAuthService.completeLogin(eq("adminUser"), eq("123456"), eq("valid-challenge")))
+                .thenReturn(java.util.Optional.of(admin));
         when(jwtUtils.generateAdminToken(eq("adminUser"), eq(1L), eq(0), eq(0L)))
                 .thenReturn("access-token-value");
         when(jwtUtils.getAccessTokenExpiration()).thenReturn(900L);
-        when(refreshTokenService.createRefreshToken(eq(1L), eq("admin"), any()))
+        when(refreshTokenService.createRefreshToken(eq(1L), eq("admin"), anyLong(), any()))
                 .thenReturn(refreshToken);
 
         String body = objectMapper.writeValueAsString(Map.of(
@@ -230,12 +230,12 @@ class TwoFactorAuthControllerTest extends BaseControllerTest {
         admin.setIsActive(true);
         admin.setLevel(0);
         RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setIssuedAuthVersion(0L);
         refreshToken.setToken("refresh-token-cookie-value");
-        when(twoFactorAuthService.verifyCodeByUsername("adminUser", "123456", "valid-challenge"))
-                .thenReturn(true);
-        when(twoFactorAuthService.markLoginSuccessful("adminUser")).thenReturn(admin);
+        when(twoFactorAuthService.completeLogin("adminUser", "123456", "valid-challenge"))
+                .thenReturn(java.util.Optional.of(admin));
         when(jwtUtils.generateAdminToken("adminUser", 1L, 0, 0L)).thenReturn("access-token-value");
-        when(refreshTokenService.createRefreshToken(eq(1L), eq("admin"), any())).thenReturn(refreshToken);
+        when(refreshTokenService.createRefreshToken(eq(1L), eq("admin"), anyLong(), any())).thenReturn(refreshToken);
         when(refreshTokenCookieService.useCookies()).thenReturn(true);
         String body = objectMapper.writeValueAsString(Map.of(
                 "username", "adminUser", "code", "123456", "challengeToken", "valid-challenge"));

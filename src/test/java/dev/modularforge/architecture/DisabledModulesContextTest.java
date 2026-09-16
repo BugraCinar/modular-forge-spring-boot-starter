@@ -34,6 +34,8 @@ class DisabledModulesContextTest {
 
     @Test
     void optionalModuleBeansAreAbsent() {
+        assertThat(context.getBeansOfType(dev.modularforge.kafka.KafkaAccountEventListener.class)).isEmpty();
+        assertThat(context.getBeansOfType(org.springframework.kafka.core.KafkaTemplate.class)).isEmpty();
         assertThat(context.getBeansOfType(AdminManagementController.class)).isEmpty();
         assertThat(context.getBeansOfType(UserProfileController.class)).isEmpty();
         assertThat(context.getBeansOfType(TwoFactorAuthService.class)).isEmpty();

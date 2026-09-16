@@ -1,6 +1,5 @@
 package dev.modularforge.storage.r2;
 
-import dev.modularforge.identity.model.User;
 
 import dev.modularforge.shared.error.ForbiddenException;
 import dev.modularforge.storage.r2.ImageUploadService;
@@ -57,7 +56,7 @@ public class UserImageController {
             String oldImageUrl = userProfileService.getProfilePictureUrl(userId);
             String imageUrl = imageUploadService.uploadProfileImage(file, "USER", userId);
             userProfileService.updateProfilePicture(userId, imageUrl);
-            deleteOldImageAfterSuccessfulReplacement(oldImageUrl, imageUrl);
+            deleteOldImageAfterSuccessfulReplacement(oldImageUrl, imageUrl, userId);
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Profile image updated successfully",
@@ -71,12 +70,12 @@ public class UserImageController {
         }
     }
 
-    private void deleteOldImageAfterSuccessfulReplacement(String oldImageUrl, String newImageUrl) {
+    private void deleteOldImageAfterSuccessfulReplacement(String oldImageUrl, String newImageUrl, Long ownerId) {
         if (oldImageUrl == null || oldImageUrl.isBlank() || oldImageUrl.equals(newImageUrl)) {
             return;
         }
         try {
-            imageUploadService.deleteImage(oldImageUrl);
+            imageUploadService.deleteProfileImage(oldImageUrl, "user", ownerId);
         } catch (Exception e) {
             log.warn("Could not delete replaced profile image: {}", oldImageUrl, e);
         }
@@ -93,7 +92,7 @@ public class UserImageController {
                 throw new ForbiddenException("You can only delete your own profile image");
             }
 
-            imageUploadService.deleteImage(imageUrl);
+            imageUploadService.deleteProfileImage(imageUrl, "user", userId);
             userProfileService.updateProfilePicture(userId, null);
             return ResponseEntity.ok(Map.of("success", true, "message", "Profile image removed successfully"));
         } catch (ForbiddenException e) {

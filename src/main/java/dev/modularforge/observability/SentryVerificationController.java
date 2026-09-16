@@ -1,6 +1,5 @@
 package dev.modularforge.observability;
 
-import dev.modularforge.identity.model.Admin;
 
 import java.util.Map;
 

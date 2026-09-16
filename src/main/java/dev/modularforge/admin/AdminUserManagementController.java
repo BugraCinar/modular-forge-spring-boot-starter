@@ -7,7 +7,6 @@ import dev.modularforge.admin.dto.AdminUserListResponse;
 import dev.modularforge.admin.dto.ResetUserPasswordRequest;
 import dev.modularforge.identity.model.Admin;
 import dev.modularforge.identity.model.User;
-import dev.modularforge.identity.model.UserType;
 
 import dev.modularforge.admin.dto.*;
 import dev.modularforge.admin.AdminUserManagementService;

@@ -1,7 +1,6 @@
 package dev.modularforge.auth.token;
 
 import dev.modularforge.shared.audit.AdminActivityAudit;
-import dev.modularforge.identity.model.Role;
 import dev.modularforge.shared.PaginationUtils;
 
 import dev.modularforge.auth.token.dto.PasswordResetTokenDTO;

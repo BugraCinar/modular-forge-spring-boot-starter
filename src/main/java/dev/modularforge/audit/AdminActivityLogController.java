@@ -1,6 +1,5 @@
 package dev.modularforge.audit;
 
-import dev.modularforge.security.AdminLevelAuthorizationService;
 
 import dev.modularforge.audit.dto.AdminActivityLogDTO;
 import dev.modularforge.audit.dto.AdminActivityLogListResponse;

@@ -58,11 +58,11 @@ class RefreshTokenServiceExtendedTest {
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         when(request.getHeader("User-Agent")).thenReturn(null);
-        assertThat(service.createRefreshToken(1L, "user", request).getDeviceInfo()).isEqualTo("Unknown");
+        assertThat(service.createRefreshToken(1L, "user", 0L, request).getDeviceInfo()).isEqualTo("Unknown");
         when(request.getHeader("User-Agent")).thenReturn("");
-        assertThat(service.createRefreshToken(1L, "user", request).getDeviceInfo()).isEqualTo("Unknown");
+        assertThat(service.createRefreshToken(1L, "user", 0L, request).getDeviceInfo()).isEqualTo("Unknown");
         when(request.getHeader("User-Agent")).thenReturn("x".repeat(501));
-        assertThat(service.createRefreshToken(1L, "user", request).getDeviceInfo()).hasSize(500);
+        assertThat(service.createRefreshToken(1L, "user", 0L, request).getDeviceInfo()).hasSize(500);
     }
 
     @Test
@@ -178,8 +178,27 @@ class RefreshTokenServiceExtendedTest {
 
     private RefreshToken token(Long userId, String role, boolean revoked, boolean expired) {
         RefreshToken token = new RefreshToken(userId, role, 30L);
+        token.setIssuedAuthVersion(0L);
         token.setIsRevoked(revoked);
         token.setExpiryDate(expired ? LocalDateTime.now().minusMinutes(1) : LocalDateTime.now().plusMinutes(5));
         return token;
     }
+
+    @Test void tokenCreationCapturesCurrentAccountVersionAndLogoutInvalidatesBothRoles() {
+        User user = new User(); user.setId(1L); user.setAuthVersion(4L);
+        Admin admin = new Admin(); admin.setId(2L); admin.setAuthVersion(8L);
+        when(users.findById(1L)).thenReturn(Optional.of(user));
+        when(admins.findById(2L)).thenReturn(Optional.of(admin));
+        when(hashes.generateToken()).thenReturn("token");
+        when(repository.save(any())).thenAnswer(i -> i.getArgument(0));
+        assertThat(service.createRefreshToken(1L, "user", request).getIssuedAuthVersion()).isEqualTo(4L);
+        assertThat(service.createRefreshToken(2L, "admin", request).getIssuedAuthVersion()).isEqualTo(8L);
+        service.revokeAllSessions(1L, "user"); service.revokeAllSessions(2L, "admin");
+        assertThat(user.currentAuthVersion()).isEqualTo(5L); assertThat(admin.currentAuthVersion()).isEqualTo(9L);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.revokeAllSessions(1L, "other")).isInstanceOf(IllegalArgumentException.class);
+        RefreshToken legacy = new RefreshToken(1L, "user", 30L);
+        assertThat(service.rotateRefreshToken(legacy, request)).isEmpty();
+        verify(repository, never()).revokeIfActive(any(), any());
+    }
+
 }

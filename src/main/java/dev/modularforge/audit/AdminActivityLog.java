@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@org.springframework.data.mongodb.core.mapping.Document(collection = "admin_activity_log")
 @Table(name = "admin_activity_log", indexes = {
     @Index(name = "idx_admin_activity_admin_id", columnList = "admin_id"),
     @Index(name = "idx_admin_activity_action", columnList = "action"),
@@ -38,18 +39,18 @@ public class AdminActivityLog {
     @Column(name = "resource_id", length = 100)
     private String resourceId;
 
-    @Column(name = "details", columnDefinition = "JSON")
+    @Column(name = "details", columnDefinition = "TEXT")
     private String details;
 
     @Column(name = "ip_address", length = 45)
     private String ipAddress;
 
-    @Lob
-    @Column(name = "user_agent")
+    @Column(name = "user_agent", columnDefinition = "TEXT")
     private String userAgent;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+    @org.springframework.data.annotation.Transient
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "admin_id", insertable = false, updatable = false)
     private Admin admin;

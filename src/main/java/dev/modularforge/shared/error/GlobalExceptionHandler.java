@@ -1,6 +1,5 @@
 package dev.modularforge.shared.error;
 
-import dev.modularforge.identity.model.Role;
 import dev.modularforge.identity.model.User;
 
 import dev.modularforge.security.JwtUtils;

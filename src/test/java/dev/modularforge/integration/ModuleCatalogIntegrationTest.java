@@ -26,7 +26,7 @@ class ModuleCatalogIntegrationTest extends BaseIntegrationTest {
                 "/api/v1/modules", HttpMethod.GET, null, MODULE_LIST);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).hasSize(14);
+        assertThat(response.getBody()).hasSize(15);
 
         Map<String, Object> twoFactor = response.getBody().stream()
                 .filter(module -> "two-factor".equals(module.get("id")))

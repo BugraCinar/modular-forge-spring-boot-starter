@@ -34,3 +34,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Isolated local database binaries and test data
+.local-test-db/

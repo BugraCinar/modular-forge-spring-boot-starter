@@ -1,6 +1,5 @@
 package dev.modularforge.shared.web;
 
-import dev.modularforge.identity.model.Admin;
 public final class ApiRoutes {
 
     public static final String ADMIN_BASE = "/api/v1/admin";

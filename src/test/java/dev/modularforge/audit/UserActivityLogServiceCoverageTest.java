@@ -64,9 +64,8 @@ class UserActivityLogServiceCoverageTest {
         user.setId(10L);
         user.setUsername("alice");
         user.setEmail("alice@example.com");
-        ArgumentCaptor<Specification<UserActivityLog>> specCaptor = ArgumentCaptor.forClass(Specification.class);
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(repository.findAll(any(Specification.class), any(Pageable.class)))
+        when(repository.findWithFilters(any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(known, unknown, admin), PageRequest.of(0, 10), 13));
         when(users.findAllById(any())).thenReturn(List.of(user));
 
@@ -74,69 +73,40 @@ class UserActivityLogServiceCoverageTest {
                 10L, "USER", "LOGIN", "SESSION", false, start, end, "192.0.2.1",
                 0, 10, "action", "asc", 99L, request);
 
-        verify(repository).findAll(specCaptor.capture(), pageableCaptor.capture());
+        verify(repository).findWithFilters(any(), any(), any(), any(), any(), any(), any(), any(), pageableCaptor.capture());
         assertThat(pageableCaptor.getValue().getSort().getOrderFor("action").getDirection().isAscending()).isTrue();
         assertThat(result.getLogs()).extracting("username").containsExactly("alice", "Unknown", "Unknown");
         assertThat(result.getTotalElements()).isEqualTo(13);
 
-        Root<UserActivityLog> root = org.mockito.Mockito.mock(Root.class);
-        CriteriaQuery<?> query = org.mockito.Mockito.mock(CriteriaQuery.class);
-        CriteriaBuilder cb = org.mockito.Mockito.mock(CriteriaBuilder.class);
-        Path path = org.mockito.Mockito.mock(Path.class);
-        Expression expression = org.mockito.Mockito.mock(Expression.class);
-        Predicate predicate = org.mockito.Mockito.mock(Predicate.class);
-        lenient().when(root.get(any(String.class))).thenReturn(path);
-        lenient().when(cb.lower(any(Expression.class))).thenReturn(expression);
-        lenient().when(cb.equal(any(Expression.class), any())).thenReturn(predicate);
-        lenient().when(cb.greaterThanOrEqualTo(any(Expression.class), any(LocalDateTime.class))).thenReturn(predicate);
-        lenient().when(cb.lessThanOrEqualTo(any(Expression.class), any(LocalDateTime.class))).thenReturn(predicate);
-        lenient().when(cb.and(any(Predicate[].class))).thenReturn(predicate);
-
-        assertThat(specCaptor.getValue().toPredicate(root, query, cb)).isSameAs(predicate);
-        verify(cb).and(any(Predicate[].class));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Test
     void supportsEmptyFiltersInvalidSortAndDescendingDirection() {
-        ArgumentCaptor<Specification<UserActivityLog>> specCaptor = ArgumentCaptor.forClass(Specification.class);
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(repository.findAll(any(Specification.class), any(Pageable.class)))
+        when(repository.findWithFilters(any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
 
         UserActivityLogListResponse result = service.getAllUserActivityLogs(
                 null, "", "", "", null, null, null, "",
                 0, 20, "not-a-field", "anything", 99L, request);
 
-        verify(repository).findAll(specCaptor.capture(), pageableCaptor.capture());
+        verify(repository).findWithFilters(any(), any(), any(), any(), any(), any(), any(), any(), pageableCaptor.capture());
         assertThat(pageableCaptor.getValue().getSort().getOrderFor("createdAt").getDirection().isDescending()).isTrue();
         assertThat(result.getLogs()).isEmpty();
 
-        Root<UserActivityLog> root = org.mockito.Mockito.mock(Root.class);
-        CriteriaQuery<?> query = org.mockito.Mockito.mock(CriteriaQuery.class);
-        CriteriaBuilder cb = org.mockito.Mockito.mock(CriteriaBuilder.class);
-        Predicate predicate = org.mockito.Mockito.mock(Predicate.class);
-        when(cb.and(any(Predicate[].class))).thenReturn(predicate);
-        assertThat(specCaptor.getValue().toPredicate(root, query, cb)).isSameAs(predicate);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Test
     void specificationAcceptsNullTextFilters() {
-        ArgumentCaptor<Specification<UserActivityLog>> specCaptor = ArgumentCaptor.forClass(Specification.class);
-        when(repository.findAll(any(Specification.class), any(Pageable.class)))
+        when(repository.findWithFilters(any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
 
         service.getAllUserActivityLogs(null, null, null, null, null, null, null, null,
                 0, 20, "createdAt", "desc", 99L, request);
 
-        verify(repository).findAll(specCaptor.capture(), any(Pageable.class));
-        Root<UserActivityLog> root = org.mockito.Mockito.mock(Root.class);
-        CriteriaQuery<?> query = org.mockito.Mockito.mock(CriteriaQuery.class);
-        CriteriaBuilder cb = org.mockito.Mockito.mock(CriteriaBuilder.class);
-        Predicate predicate = org.mockito.Mockito.mock(Predicate.class);
-        when(cb.and(any(Predicate[].class))).thenReturn(predicate);
-        assertThat(specCaptor.getValue().toPredicate(root, query, cb)).isSameAs(predicate);
+        verify(repository).findWithFilters(any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class));
     }
 
     @Test
@@ -178,22 +148,12 @@ class UserActivityLogServiceCoverageTest {
     void deletesOldLogsAndCalculatesStatistics() {
         UserActivityLog first = log(1L, 10L, "user");
         UserActivityLog second = log(2L, 11L, "user");
-        when(repository.findAll(any(Specification.class))).thenReturn(List.of(first, second));
+        when(repository.deleteByCreatedAtBefore(any())).thenReturn(2);
         LocalDateTime before = LocalDateTime.now().minusDays(30);
 
         assertThat(service.deleteOldActivityLogs(before)).isEqualTo(2);
-        verify(repository).deleteAll(List.of(first, second));
+        verify(repository).deleteByCreatedAtBefore(before);
 
-        ArgumentCaptor<Specification<UserActivityLog>> deleteSpec = ArgumentCaptor.forClass(Specification.class);
-        verify(repository).findAll(deleteSpec.capture());
-        Root<UserActivityLog> root = org.mockito.Mockito.mock(Root.class);
-        CriteriaQuery<?> query = org.mockito.Mockito.mock(CriteriaQuery.class);
-        CriteriaBuilder cb = org.mockito.Mockito.mock(CriteriaBuilder.class);
-        Path path = org.mockito.Mockito.mock(Path.class);
-        Predicate predicate = org.mockito.Mockito.mock(Predicate.class);
-        when(root.get("createdAt")).thenReturn(path);
-        when(cb.lessThan(path, before)).thenReturn(predicate);
-        assertThat(deleteSpec.getValue().toPredicate(root, query, cb)).isSameAs(predicate);
 
         LocalDateTime since = LocalDateTime.now().minusDays(1);
         when(repository.countByActionSince("LOGIN", since)).thenReturn(1L);

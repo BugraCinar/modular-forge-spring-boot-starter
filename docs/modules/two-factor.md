@@ -16,3 +16,7 @@ It owns `/api/v1/admin/2fa/**`, `two_factor_credentials`, TOTP/QR dependencies, 
 8. Run `./mvnw clean verify` and confirm normal admin login returns tokens directly.
 
 To replace TOTP, implement `SecondFactorGateway` in another module and keep challenge verification inside that module.
+
+## Persistence and security behavior
+
+Enabled authenticators cannot be overwritten by setup; disable with a valid existing TOTP first. Challenges carry the account auth version and are rejected after password/session invalidation or account locking/deactivation. Login challenge consumption and account update execute in one transaction. Credential row versions enforce optimistic locking in MongoDB; SQL also uses its repository lock. Remove both `persistence.jpa` and `persistence.mongo` adapters when physically removing this module.

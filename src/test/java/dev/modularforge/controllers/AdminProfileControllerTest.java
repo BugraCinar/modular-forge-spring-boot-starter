@@ -5,7 +5,7 @@ import dev.modularforge.identity.model.Admin;
 
 import tools.jackson.databind.ObjectMapper;
 import dev.modularforge.admin.dto.AdminProfileDTO;
-import dev.modularforge.admin.dto.ChangePasswordRequest;
+import dev.modularforge.shared.dto.ChangePasswordRequest;
 import dev.modularforge.admin.dto.UpdateAdminProfileRequest;
 import dev.modularforge.security.AdminLevelAuthorizationService;
 import dev.modularforge.admin.AdminProfileService;
@@ -33,6 +33,7 @@ class AdminProfileControllerTest extends BaseControllerTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
 
+    @MockitoBean dev.modularforge.auth.EmailChangeService emailChanges;
     @MockitoBean AdminProfileService adminProfileService;
     @MockitoBean AdminLevelAuthorizationService adminLevelAuthorizationService;
 
@@ -119,4 +120,15 @@ class AdminProfileControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Admin account reactivated successfully"));
     }
+
+    @Test void emailChangeUsesAuthenticatedAccountAndPassword() throws Exception {
+        mockMvc.perform(post("/api/v1/admin/profile/change-email")
+                .principal(makeAdminAuth(1L))
+                .with(authentication(makeAdminAuth(1L)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"Password1!\",\"newEmail\":\"new@example.com\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true));
+        org.mockito.Mockito.verify(emailChanges).request(1L, "admin", "Password1!", "new@example.com");
+    }
+
 }

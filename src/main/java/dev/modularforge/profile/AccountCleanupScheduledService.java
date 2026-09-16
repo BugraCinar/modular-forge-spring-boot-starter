@@ -1,6 +1,5 @@
 package dev.modularforge.profile;
 
-import dev.modularforge.identity.model.Admin;
 
 import dev.modularforge.identity.model.User;
 import dev.modularforge.auth.token.RefreshTokenRepository;

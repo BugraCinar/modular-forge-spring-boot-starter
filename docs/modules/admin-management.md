@@ -12,3 +12,7 @@ It owns admin/profile and user-management endpoints and DTOs. Admin identity rem
 4. Review security matchers for obsolete admin-management paths and remove them.
 5. Keep the `Admin` entity/repository and `AdminLevelAuthorizationService` while admin login or protected operational endpoints exist.
 6. Remove the catalog entry and run `./mvnw clean verify`.
+
+## Persistence and security behavior
+
+Admin profile PUT rejects direct email and image URL changes. `POST /api/v1/admin/profile/change-email` uses the shared password-confirmed email verification flow. Profile deactivation/reactivation follows the management hierarchy: level 0 can manage other admins; level 1 can manage level 2; peers and self-targets are rejected.

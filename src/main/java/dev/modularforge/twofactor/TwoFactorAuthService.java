@@ -69,6 +69,7 @@ public class TwoFactorAuthService implements SecondFactorGateway {
     @Override
     @Transactional
     public Optional<Challenge> beginChallenge(Long adminId) {
+        Admin admin = requireAdmin(adminId);
         return credentialRepository.findByAdminId(adminId)
                 .filter(TwoFactorCredential::isEnabled)
                 .map(credential -> {
@@ -76,6 +77,7 @@ public class TwoFactorAuthService implements SecondFactorGateway {
                     credential.setChallengeHash(hash(token));
                     credential.setChallengeExpiresAt(LocalDateTime.now().plusSeconds(challengeTtlSeconds));
                     credential.setChallengeAttempts(0);
+                    credential.setChallengeAuthVersion(admin.currentAuthVersion());
                     credentialRepository.save(credential);
                     return new Challenge(token, "Two-factor authentication required");
                 });
@@ -89,6 +91,10 @@ public class TwoFactorAuthService implements SecondFactorGateway {
 
         TwoFactorCredential credential = credentialRepository.findByAdminId(adminId)
                 .orElseGet(TwoFactorCredential::new);
+        if (credential.isEnabled()) {
+            throw new dev.modularforge.shared.error.BadRequestException(
+                    "Disable the existing authenticator with its verification code before setting up a new one");
+        }
         credential.setAdminId(adminId);
         credential.setEnabled(false);
         credential.setEncryptedSecret(secretCipher.encrypt(secret));
@@ -129,28 +135,47 @@ public class TwoFactorAuthService implements SecondFactorGateway {
 
     @Transactional
     public boolean verifyCodeByUsername(String username, String code, String challengeToken) {
+        return verifyLoginChallenge(username, code, challengeToken).isPresent();
+    }
+
+    @Transactional
+    public Optional<Admin> completeLogin(String username, String code, String challengeToken) {
+        return verifyLoginChallenge(username, code, challengeToken).map(admin -> {
+            admin.setLastLoginAt(LocalDateTime.now());
+            return adminRepository.saveAndFlush(admin);
+        });
+    }
+
+    private Optional<Admin> verifyLoginChallenge(String username, String code, String challengeToken) {
         Optional<Admin> admin = adminRepository.findByUsernameOrEmail(username, username);
-        if (admin.isEmpty()) {
-            return false;
+        if (admin.isEmpty() || !Boolean.TRUE.equals(admin.get().getIsActive())
+                || (admin.get().getLockedUntil() != null && admin.get().getLockedUntil().isAfter(LocalDateTime.now()))) {
+            return Optional.empty();
         }
         Optional<TwoFactorCredential> stored = credentialRepository.findForUpdateByAdminId(admin.get().getId());
         if (stored.isEmpty() || !stored.get().isEnabled()) {
-            return false;
+            return Optional.empty();
         }
 
         TwoFactorCredential credential = stored.get();
+        if (credential.getChallengeAuthVersion() == null
+                || credential.getChallengeAuthVersion() != admin.get().currentAuthVersion()) {
+            clearChallenge(credential);
+            credentialRepository.save(credential);
+            return Optional.empty();
+        }
         if (!validChallenge(credential, challengeToken)) {
             registerChallengeFailure(credential);
-            return false;
+            return Optional.empty();
         }
         if (!acceptCode(credential, code)) {
             registerChallengeFailure(credential);
-            return false;
+            return Optional.empty();
         }
 
         clearChallenge(credential);
         credentialRepository.save(credential);
-        return true;
+        return Optional.of(admin.get());
     }
 
     @Transactional
@@ -233,6 +258,7 @@ public class TwoFactorAuthService implements SecondFactorGateway {
     }
 
     private void clearChallenge(TwoFactorCredential credential) {
+        credential.setChallengeAuthVersion(null);
         credential.setChallengeHash(null);
         credential.setChallengeExpiresAt(null);
         credential.setChallengeAttempts(0);

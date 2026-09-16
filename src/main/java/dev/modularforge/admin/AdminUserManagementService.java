@@ -9,8 +9,6 @@ import dev.modularforge.shared.audit.AdminActivityAudit;
 import dev.modularforge.auth.PasswordService;
 import dev.modularforge.auth.token.RefreshTokenService;
 import dev.modularforge.auth.token.TokenHashService;
-import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.Role;
 import dev.modularforge.shared.notification.NotificationGateway;
 import dev.modularforge.shared.PaginationUtils;
 

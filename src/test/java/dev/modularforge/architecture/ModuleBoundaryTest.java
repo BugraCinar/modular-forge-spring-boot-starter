@@ -14,6 +14,13 @@ class ModuleBoundaryTest {
                     .importPackages("dev.modularforge");
 
     @Test
+    void kafkaImplementationStaysBehindTheEventContract() {
+        noClasses().that().resideOutsideOfPackage("dev.modularforge.kafka..")
+                .should().dependOnClassesThat().resideInAnyPackage("dev.modularforge.kafka..")
+                .check(productionClasses);
+    }
+
+    @Test
     void twoFactorCanBeRemovedWithoutChangingOtherModules() {
         noClasses().that().resideOutsideOfPackage("dev.modularforge.twofactor..")
                 .should().dependOnClassesThat().resideInAnyPackage("dev.modularforge.twofactor..")
@@ -38,6 +45,12 @@ class ModuleBoundaryTest {
     void emailImplementationStaysBehindItsPort() {
         noClasses().that().resideOutsideOfPackage("dev.modularforge.notification..")
                 .should().dependOnClassesThat().resideInAnyPackage("dev.modularforge.notification..")
+                .check(productionClasses);
+    }
+    @Test
+    void featureServicesDependOnRepositoryPortsRatherThanStoreAdapters() {
+        noClasses().that().resideOutsideOfPackage("..persistence..")
+                .should().dependOnClassesThat().resideInAnyPackage("..persistence.jpa..", "..persistence.mongo..")
                 .check(productionClasses);
     }
 }

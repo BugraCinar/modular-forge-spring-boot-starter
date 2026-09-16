@@ -41,6 +41,7 @@ Approved ports currently are:
 | second login step | `auth.SecondFactorGateway` | `twofactor.TwoFactorAuthService` |
 | profile image deletion | `profile.ProfileImageStorage` | `storage.r2.ImageUploadService` |
 | notifications | `shared.notification.NotificationGateway` | `notification.EmailService` |
+| application events | `shared.events.AccountEvent` via Spring `ApplicationEventPublisher` | optional Kafka after-commit listener |
 | audit events | `shared.audit.*` | services in `audit` |
 | optional security filter | `security.SecurityFilterExtension` | audit filter extension |
 

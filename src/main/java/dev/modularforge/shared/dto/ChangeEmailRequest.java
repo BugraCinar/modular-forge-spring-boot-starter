@@ -1,6 +1,5 @@
-package dev.modularforge.profile.dto;
+package dev.modularforge.shared.dto;
 
-import dev.modularforge.identity.model.User;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

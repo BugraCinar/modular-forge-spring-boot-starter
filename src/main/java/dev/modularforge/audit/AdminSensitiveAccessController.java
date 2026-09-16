@@ -1,8 +1,5 @@
 package dev.modularforge.audit;
 
-import dev.modularforge.security.AdminLevelAuthorizationService;
-import dev.modularforge.identity.model.Role;
-import dev.modularforge.identity.model.User;
 
 import dev.modularforge.audit.dto.SensitiveAccessLogListResponse;
 import dev.modularforge.audit.dto.SensitiveAccessLogResponse;

@@ -1,9 +1,5 @@
 package dev.modularforge.audit;
 
-import dev.modularforge.auth.AuthService;
-import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.Role;
-import dev.modularforge.identity.model.User;
 
 import dev.modularforge.audit.UserActivityLogger;
 import jakarta.servlet.DispatcherType;
@@ -64,12 +60,8 @@ public class UserActivityLoggingInterceptor implements HandlerInterceptor {
 
             Map<String, Object> logDetails = new HashMap<>();
             logDetails.put("responseStatus", response.getStatus());
-            String queryString = request.getQueryString();
-            if (queryString != null && !queryString.isBlank()) {
-                logDetails.put("query", queryString);
-            }
             if (ex != null) {
-                logDetails.put("error", ex.getMessage());
+                logDetails.put("errorType", ex.getClass().getSimpleName());
             }
 
             String failureReason = success ? null : "HTTP " + response.getStatus();

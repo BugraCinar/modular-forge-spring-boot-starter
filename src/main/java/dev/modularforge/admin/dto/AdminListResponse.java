@@ -1,6 +1,5 @@
 package dev.modularforge.admin.dto;
 
-import dev.modularforge.identity.model.Admin;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

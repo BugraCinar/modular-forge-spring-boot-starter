@@ -41,6 +41,7 @@ class TwoFactorAuthServiceTest {
 
     @Test
     void enabledCredentialCreatesHashedSingleUseChallenge() {
+        when(adminRepository.findById(7L)).thenReturn(Optional.of(new Admin()));
         TwoFactorCredential credential = credential(7L, true);
         when(credentialRepository.findByAdminId(7L)).thenReturn(Optional.of(credential));
         when(credentialRepository.save(any())).thenAnswer(call -> call.getArgument(0));
@@ -58,6 +59,7 @@ class TwoFactorAuthServiceTest {
 
     @Test
     void disabledCredentialDoesNotCreateAChallenge() {
+        when(adminRepository.findById(7L)).thenReturn(Optional.of(new Admin()));
         when(credentialRepository.findByAdminId(7L)).thenReturn(Optional.of(credential(7L, false)));
 
         assertThat(service.beginChallenge(7L)).isEmpty();
@@ -86,6 +88,7 @@ class TwoFactorAuthServiceTest {
     @Test
     void invalidChallengeIncrementsAttemptsWithoutCheckingTotp() {
         TwoFactorCredential credential = credential(7L, true);
+        credential.setChallengeAuthVersion(0L);
         credential.setChallengeHash("not-the-presented-token-hash");
         credential.setChallengeExpiresAt(LocalDateTime.now().plusMinutes(2));
         Admin admin = new Admin();

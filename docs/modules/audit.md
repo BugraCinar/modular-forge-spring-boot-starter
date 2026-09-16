@@ -15,3 +15,7 @@ Core consumers use `shared.audit` ports. When disabled, no-op port beans keep bu
 5. Remove `app.security.log-auth-errors`, `app.security.log-sensitive-access`, alert, and retention settings.
 6. Keep the `shared.audit` ports and disabled fallbacks while callers use them. Remove both only after those call sites are intentionally deleted.
 7. Remove the catalog entry and run `./mvnw clean verify`.
+
+## Persistence and security behavior
+
+Audit persistence has JPA and MongoDB adapters owned by this package and controlled by the audit toggle. Table names are also Mongo collection names. Query strings are excluded from activity details to keep reset/verification tokens out of the audit trail. SQL details use portable TEXT; daily statistics use a portable date cast. Physical removal must include both adapters and an explicit forward migration/collection retention decision.

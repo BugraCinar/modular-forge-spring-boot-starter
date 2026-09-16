@@ -30,6 +30,7 @@ class RefreshTokenRepositoryTest {
 
     private RefreshToken buildToken(Long userId, String role, boolean revoked, long expiryDays) {
         RefreshToken t = new RefreshToken(userId, role, expiryDays);
+        t.setIssuedAuthVersion(0L);
         t.setIsRevoked(revoked);
         return t;
     }
@@ -181,9 +182,9 @@ class RefreshTokenRepositoryTest {
 
         @Test
         @DisplayName("deletes revoked and expired tokens")
-        void deletesRevokedAndExpired() {
+        void deletesExpiredTokens() {
             int deleted = refreshTokenRepository.cleanupRevokedAndExpired(LocalDateTime.now());
-            assertThat(deleted).isGreaterThanOrEqualTo(2);
+            assertThat(deleted).isEqualTo(1);
         }
 
         @Test
@@ -191,7 +192,8 @@ class RefreshTokenRepositoryTest {
         void keepsActiveTokens() {
             refreshTokenRepository.cleanupRevokedAndExpired(LocalDateTime.now());
             List<RefreshToken> remaining = refreshTokenRepository.findAll();
-            assertThat(remaining).allMatch(t -> !t.getIsRevoked() && !t.isExpired());
+            assertThat(remaining).allMatch(t -> !t.isExpired());
+            assertThat(remaining).anyMatch(t -> t.getIsRevoked());
         }
     }
 

@@ -1,6 +1,5 @@
 package dev.modularforge.profile.dto;
 
-import dev.modularforge.identity.model.User;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;

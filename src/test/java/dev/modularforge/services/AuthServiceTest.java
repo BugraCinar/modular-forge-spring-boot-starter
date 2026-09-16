@@ -123,6 +123,7 @@ class AuthServiceTest {
 
     private RefreshToken buildRefreshToken() {
         RefreshToken rt = new RefreshToken(1L, "user", 30L);
+        rt.setIssuedAuthVersion(0L);
         rt.setId(1L);
         return rt;
     }
@@ -305,7 +306,7 @@ class AuthServiceTest {
             when(jwtUtils.getAccessTokenExpiration()).thenReturn(900L);
 
             RefreshToken rt = buildRefreshToken();
-            when(refreshTokenService.createRefreshToken(1L, "user", httpRequest)).thenReturn(rt);
+            when(refreshTokenService.createRefreshToken(1L, "user", 0L, httpRequest)).thenReturn(rt);
 
             LoginRequest req = buildLoginRequest("testUser", "correct", "user");
             AuthResponse resp = authService.login(req, httpRequest);
@@ -404,7 +405,8 @@ class AuthServiceTest {
             when(jwtUtils.getAccessTokenExpiration()).thenReturn(900L);
 
             RefreshToken rt = new RefreshToken(3L, "admin", 30L);
-            when(refreshTokenService.createRefreshToken(3L, "admin", httpRequest)).thenReturn(rt);
+        rt.setIssuedAuthVersion(0L);
+            when(refreshTokenService.createRefreshToken(3L, "admin", 0L, httpRequest)).thenReturn(rt);
 
             LoginRequest req = buildLoginRequest("adminUser", "correct", "admin");
             AuthResponse resp = authService.login(req, httpRequest);
@@ -444,7 +446,7 @@ class AuthServiceTest {
             when(jwtUtils.generateUserToken(anyString(), anyLong(), anyString(), anyLong())).thenReturn("jwt");
             when(jwtUtils.getAccessTokenExpiration()).thenReturn(900L);
             RefreshToken rt = buildRefreshToken();
-            when(refreshTokenService.createRefreshToken(any(), any(), any())).thenReturn(rt);
+            when(refreshTokenService.createRefreshToken(any(), any(), anyLong(), any())).thenReturn(rt);
 
             LoginRequest req = buildLoginRequest("user", "correct", null);
             AuthResponse resp = authService.login(req, httpRequest);

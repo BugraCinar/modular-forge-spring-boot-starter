@@ -1,6 +1,5 @@
 package dev.modularforge.audit;
 
-import dev.modularforge.identity.model.Role;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -14,6 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @Entity
+@org.springframework.data.mongodb.core.mapping.Document(collection = "authentication_error_logs")
 @Table(name = "authentication_error_logs", indexes = {
     @Index(name = "idx_auth_error_type", columnList = "error_type"),
     @Index(name = "idx_auth_error_user_id", columnList = "user_id"),
@@ -43,8 +43,7 @@ public class AuthenticationErrorLog {
     @Column(name = "ip_address", length = 45)
     private String ipAddress;
 
-    @Lob
-    @Column(name = "user_agent")
+    @Column(name = "user_agent", columnDefinition = "TEXT")
     private String userAgent;
 
     @Column(name = "endpoint", nullable = false, length = 500)

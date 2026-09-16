@@ -1,6 +1,5 @@
 package dev.modularforge.auth.token;
 
-import dev.modularforge.identity.model.Role;
 
 import jakarta.persistence.*;
 import lombok.Data;
@@ -8,6 +7,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
+@org.springframework.data.mongodb.core.mapping.Document(collection = "refresh_tokens")
 @Table(name = "refresh_tokens", indexes = {
     @Index(name = "idx_refresh_token", columnList = "token"),
     @Index(name = "idx_refresh_token_hash", columnList = "token_hash"),
@@ -17,20 +17,26 @@ import java.util.UUID;
 })
 @Data
 public class RefreshToken {
+    @Column(name = "issued_auth_version")
+    private Long issuedAuthVersion;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, unique = true)
+    @org.springframework.data.mongodb.core.index.Indexed(unique = true, sparse = true)
     private String token;
 
     @Column(name = "token_hash", unique = true, length = 128)
+    @org.springframework.data.mongodb.core.index.Indexed(unique = true, sparse = true)
     private String tokenHash;
 
     @Column(name = "token_preview", length = 32)
     private String tokenPreview;
 
     @Transient
+    @org.springframework.data.annotation.Transient
     private String plaintextToken;
 
     @Column(name = "user_id", nullable = false)

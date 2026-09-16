@@ -1,6 +1,5 @@
 package dev.modularforge.auth.token.dto;
 
-import dev.modularforge.identity.model.Role;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

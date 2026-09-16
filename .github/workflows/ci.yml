@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        database: [mysql, postgresql, mariadb, h2]
+        database: [mysql, postgresql, mariadb, h2, mongodb]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -38,3 +38,28 @@ jobs:
           cache: maven
       - run: chmod +x mvnw
       - run: ./mvnw -B -ntp -Ddb=${{ matrix.database }} -DskipTests package
+
+  database-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+        ports:
+          - 13306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - run: chmod +x mvnw
+      - run: docker run -d --name contract-mongo -p 27028:27028 mongo:8.0 --replSet rs0 --bind_ip_all --port 27028
+      - run: ./mvnw -B -ntp -Ddb=mysql -Dtest=DatabaseContractTest -Dcontract.provider=mysql test
+      - run: ./mvnw -B -ntp -Ddb=mongodb -Dtest=DatabaseContractTest -Dcontract.provider=mongodb test

@@ -1,9 +1,5 @@
 package dev.modularforge.security;
 
-import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.Role;
-import dev.modularforge.identity.model.User;
-import dev.modularforge.identity.model.UserType;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

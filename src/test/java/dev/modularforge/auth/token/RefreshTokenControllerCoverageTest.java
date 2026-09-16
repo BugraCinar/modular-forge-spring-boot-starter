@@ -108,6 +108,7 @@ class RefreshTokenControllerCoverageTest {
         admin.setIsActive(true);
         admin.setLevel(2);
         admin.setAuthVersion(4L);
+        old.setIssuedAuthVersion(4L);
         when(tokens.verifyRefreshToken("old")).thenReturn(Optional.of(old));
         when(admins.findById(2L)).thenReturn(Optional.of(admin)).thenThrow(new IllegalStateException("db"));
         when(tokens.rotateRefreshToken(old, request)).thenReturn(Optional.of(fresh));
@@ -211,10 +212,10 @@ class RefreshTokenControllerCoverageTest {
         when(jwtUtils.validateToken("access")).thenReturn(true);
         when(jwtUtils.extractUserIdAsLong("access")).thenReturn(1L);
         when(jwtUtils.extractRole("access")).thenReturn("user");
-        when(tokens.revokeAllUserTokens(1L, "user")).thenReturn(3);
+        when(tokens.revokeAllSessions(1L, "user")).thenReturn(3);
         assertThat(controller.logoutAll(request, response).getStatusCode()).isEqualTo(HttpStatus.OK);
 
-        doThrow(new IllegalStateException("db")).when(tokens).revokeAllUserTokens(1L, "user");
+        doThrow(new IllegalStateException("db")).when(tokens).revokeAllSessions(1L, "user");
         assertThat(controller.logoutAll(request, response).getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
@@ -259,6 +260,7 @@ class RefreshTokenControllerCoverageTest {
 
     private RefreshToken token(Long userId, String role, String value) {
         RefreshToken token = new RefreshToken(userId, role, 30L);
+        token.setIssuedAuthVersion(0L);
         token.setPlaintextToken(value);
         return token;
     }
@@ -272,4 +274,17 @@ class RefreshTokenControllerCoverageTest {
         user.setAuthVersion(0L);
         return user;
     }
+
+    @Test void refreshRejectsLegacyOrInvalidatedAccountVersion() {
+        User user = activeUser(); when(users.findById(1L)).thenReturn(Optional.of(user));
+        RefreshToken token = token(1L, "user", "old");
+        when(tokens.verifyRefreshToken("old")).thenReturn(Optional.of(token));
+        for (Long version : new Long[]{null, 99L}) {
+            token.setIssuedAuthVersion(version);
+            assertThat(controller.refresh(body("old"), new MockHttpServletRequest(), new MockHttpServletResponse()).getStatusCode())
+                    .isEqualTo(HttpStatus.UNAUTHORIZED);
+        }
+        verify(tokens, org.mockito.Mockito.never()).rotateRefreshToken(any(), any());
+    }
+
 }

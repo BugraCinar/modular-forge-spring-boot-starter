@@ -19,7 +19,7 @@ class ModularForgeApplicationMainTest {
 
             ModularForgeApplication.main(args);
 
-            assertThat(TimeZone.getDefault().getID()).isEqualTo("Europe/Istanbul");
+            assertThat(TimeZone.getDefault().getID()).isEqualTo("UTC");
             springApplication.verify(() -> SpringApplication.run(ModularForgeApplication.class, args));
         } finally {
             TimeZone.setDefault(previous);

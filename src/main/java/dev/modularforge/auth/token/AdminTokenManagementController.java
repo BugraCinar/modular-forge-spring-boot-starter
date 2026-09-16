@@ -1,7 +1,5 @@
 package dev.modularforge.auth.token;
 
-import dev.modularforge.security.AdminLevelAuthorizationService;
-import dev.modularforge.identity.model.Role;
 
 import dev.modularforge.auth.token.dto.PasswordResetTokenDTO;
 import dev.modularforge.auth.token.dto.TokenListResponse;

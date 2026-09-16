@@ -1,6 +1,5 @@
 package dev.modularforge.audit.dto;
 
-import dev.modularforge.identity.model.User;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

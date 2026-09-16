@@ -47,7 +47,7 @@ class UserActivityLogServiceTest {
         User secondUser = user(11L, "second");
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
 
-        when(activityLogRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(activityLogRepository.findWithFilters(any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(first, second)));
         when(userRepository.findAllById(any())).thenReturn(List.of(firstUser, secondUser));
 
@@ -57,7 +57,7 @@ class UserActivityLogServiceTest {
                 null, null, null, null, null, null, null, null,
                 -5, 10_000, "createdAt", "desc", 99L, request);
 
-        verify(activityLogRepository).findAll(any(Specification.class), pageableCaptor.capture());
+        verify(activityLogRepository).findWithFilters(any(), any(), any(), any(), any(), any(), any(), any(), pageableCaptor.capture());
         assertThat(pageableCaptor.getValue().getPageNumber()).isZero();
         assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(PaginationUtils.MAX_PAGE_SIZE);
         assertThat(response.getLogs()).extracting(log -> log.getUsername())

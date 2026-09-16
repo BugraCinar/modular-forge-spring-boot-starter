@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@org.springframework.data.mongodb.core.mapping.Document(collection = "users")
 @Table(name = "users", indexes = {
         @Index(name = "idx_user_email", columnList = "email"),
         @Index(name = "idx_user_username", columnList = "username"),
@@ -25,14 +26,20 @@ import java.time.LocalDateTime;
 })
 public class User {
 
+    @Version
+    @Column(name = "row_version", nullable = false)
+    private Long rowVersion;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "username", unique = true, nullable = false, length = 50)
+    @org.springframework.data.mongodb.core.index.Indexed(unique = true, sparse = true)
     private String username;
 
     @Column(name = "email", unique = true, nullable = false, length = 255)
+    @org.springframework.data.mongodb.core.index.Indexed(unique = true, sparse = true)
     private String email;
 
     @JsonIgnore

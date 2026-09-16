@@ -15,6 +15,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
+@org.springframework.data.mongodb.core.mapping.Document(collection = "two_factor_credentials")
 @Table(name = "two_factor_credentials", indexes = {
         @Index(name = "idx_two_factor_admin", columnList = "admin_id", unique = true),
         @Index(name = "idx_two_factor_challenge_hash", columnList = "challenge_hash")
@@ -23,11 +24,19 @@ import java.time.LocalDateTime;
 @Setter
 public class TwoFactorCredential {
 
+    @jakarta.persistence.Version
+    @Column(name = "row_version", nullable = false)
+    private Long rowVersion;
+
+    @Column(name = "challenge_auth_version")
+    private Long challengeAuthVersion;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "admin_id", nullable = false, unique = true)
+    @org.springframework.data.mongodb.core.index.Indexed(unique = true, sparse = true)
     private Long adminId;
 
     @Column(name = "enabled", nullable = false)

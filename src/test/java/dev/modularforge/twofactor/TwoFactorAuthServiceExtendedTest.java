@@ -55,13 +55,15 @@ class TwoFactorAuthServiceExtendedTest {
 
     @Test
     void beginChallengeAlsoReturnsEmptyWhenCredentialIsMissing() {
+        when(admins.findById(7L)).thenReturn(Optional.of(admin));
         when(credentials.findByAdminId(7L)).thenReturn(Optional.empty());
         assertThat(service.beginChallenge(7L)).isEmpty();
     }
 
     @Test
-    void setupReusesCredentialClearsChallengeAndEncodesIssuerAndAccount() {
-        TwoFactorCredential credential = credential(true);
+    void setupReusesUnenabledCredentialClearsChallengeAndEncodesIssuerAndAccount() {
+        TwoFactorCredential credential = credential(false);
+        credential.setChallengeAuthVersion(0L);
         credential.setChallengeHash("old");
         credential.setChallengeExpiresAt(LocalDateTime.now());
         credential.setChallengeAttempts(4);
@@ -146,23 +148,29 @@ class TwoFactorAuthServiceExtendedTest {
         TwoFactorCredential credential = credential(true);
         when(credentials.findForUpdateByAdminId(7L)).thenReturn(Optional.of(credential));
 
+        credential.setChallengeAuthVersion(0L);
         credential.setChallengeHash(null);
         assertThat(service.verifyCodeByUsername("root", "123456", "challenge")).isFalse();
+        credential.setChallengeAuthVersion(0L);
         credential.setChallengeHash(hash("challenge"));
         credential.setChallengeExpiresAt(LocalDateTime.now().plusMinutes(1));
         assertThat(service.verifyCodeByUsername("root", "123456", null)).isFalse();
+        credential.setChallengeAuthVersion(0L);
         credential.setChallengeHash(hash("challenge"));
         credential.setChallengeExpiresAt(null);
         assertThat(service.verifyCodeByUsername("root", "123456", "challenge")).isFalse();
+        credential.setChallengeAuthVersion(0L);
         credential.setChallengeHash(hash("challenge"));
         credential.setChallengeExpiresAt(LocalDateTime.now().minusSeconds(1));
         assertThat(service.verifyCodeByUsername("root", "123456", "challenge")).isFalse();
+        credential.setChallengeAuthVersion(0L);
         credential.setChallengeHash(hash("challenge"));
         credential.setChallengeExpiresAt(LocalDateTime.now().plusMinutes(1));
         credential.setChallengeAttempts(5);
         assertThat(service.verifyCodeByUsername("root", "123456", "challenge")).isFalse();
         assertThat(credential.getChallengeHash()).isNull();
 
+        credential.setChallengeAuthVersion(0L);
         credential.setChallengeHash(hash("challenge"));
         credential.setChallengeExpiresAt(LocalDateTime.now().plusMinutes(1));
         credential.setChallengeAttempts(0);
@@ -174,6 +182,7 @@ class TwoFactorAuthServiceExtendedTest {
     void usernameVerificationHandlesInvalidTotpAndConsumesValidChallenge() {
         when(admins.findByUsernameOrEmail("root", "root")).thenReturn(Optional.of(admin));
         TwoFactorCredential credential = credential(true);
+        credential.setChallengeAuthVersion(0L);
         credential.setChallengeHash(hash("challenge"));
         credential.setChallengeExpiresAt(LocalDateTime.now().plusMinutes(1));
         when(credentials.findForUpdateByAdminId(7L)).thenReturn(Optional.of(credential));
@@ -181,6 +190,7 @@ class TwoFactorAuthServiceExtendedTest {
         assertThat(service.verifyCodeByUsername("root", "bad", "challenge")).isFalse();
         assertThat(credential.getChallengeAttempts()).isEqualTo(1);
 
+        credential.setChallengeAuthVersion(0L);
         credential.setChallengeHash(hash("challenge"));
         credential.setChallengeExpiresAt(LocalDateTime.now().plusMinutes(1));
         credential.setChallengeAttempts(0);
@@ -270,4 +280,32 @@ class TwoFactorAuthServiceExtendedTest {
     private String hash(String value) {
         return ReflectionTestUtils.invokeMethod(service, "hash", value);
     }
+
+    @Test void completeLoginBindsAccountUpdateToTheConsumedChallenge() {
+        when(admins.findByUsernameOrEmail("root", "root")).thenReturn(Optional.of(admin));
+        TwoFactorCredential credential = credential(true);
+        credential.setChallengeAuthVersion(0L); credential.setChallengeHash(hash("challenge"));
+        credential.setChallengeExpiresAt(LocalDateTime.now().plusMinutes(1));
+        when(credentials.findForUpdateByAdminId(7L)).thenReturn(Optional.of(credential));
+        when(admins.saveAndFlush(admin)).thenReturn(admin);
+        assertThat(service.completeLogin("root", currentCode(), "challenge")).contains(admin);
+        assertThat(admin.getLastLoginAt()).isNotNull();
+        assertThat(service.completeLogin("root", currentCode(), "challenge")).isEmpty();
+        verify(admins).saveAndFlush(admin);
+    }
+
+    @Test void deactivationLocksAndSessionChangesRejectOutstandingChallenges() {
+        when(admins.findByUsernameOrEmail("root", "root")).thenReturn(Optional.of(admin));
+        admin.setIsActive(false);
+        assertThat(service.completeLogin("root", "123456", "challenge")).isEmpty();
+        admin.setIsActive(true); admin.setLockedUntil(LocalDateTime.now().plusMinutes(1));
+        assertThat(service.completeLogin("root", "123456", "challenge")).isEmpty();
+        admin.setLockedUntil(LocalDateTime.now().minusMinutes(1));
+        TwoFactorCredential credential = credential(true);
+        credential.setChallengeAuthVersion(1L); credential.setChallengeHash("hash");
+        when(credentials.findForUpdateByAdminId(7L)).thenReturn(Optional.of(credential));
+        assertThat(service.completeLogin("root", "123456", "challenge")).isEmpty();
+        assertThat(credential.getChallengeHash()).isNull();
+    }
+
 }

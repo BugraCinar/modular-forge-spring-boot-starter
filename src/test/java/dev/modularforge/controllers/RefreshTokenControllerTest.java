@@ -71,11 +71,13 @@ class RefreshTokenControllerTest extends BaseControllerTest {
     @Test
     void refresh_validAdminToken_returns200WithAccessToken() throws Exception {
         RefreshToken oldToken = new RefreshToken();
+        oldToken.setIssuedAuthVersion(0L);
         oldToken.setToken("old-refresh-token");
         oldToken.setUserId(1L);
         oldToken.setRole("admin");
 
         RefreshToken newToken = new RefreshToken();
+        newToken.setIssuedAuthVersion(0L);
         newToken.setToken("new-refresh-token");
         newToken.setUserId(1L);
         newToken.setRole("admin");
@@ -105,6 +107,7 @@ class RefreshTokenControllerTest extends BaseControllerTest {
     @Test
     void refresh_inactiveAdmin_revokesSessionsAndReturns401() throws Exception {
         RefreshToken oldToken = new RefreshToken();
+        oldToken.setIssuedAuthVersion(0L);
         oldToken.setToken("old-refresh-token");
         oldToken.setUserId(1L);
         oldToken.setRole("admin");
@@ -158,7 +161,7 @@ class RefreshTokenControllerTest extends BaseControllerTest {
         when(jwtUtils.validateToken("valid-access-token")).thenReturn(true);
         when(jwtUtils.extractUserIdAsLong("valid-access-token")).thenReturn(1L);
         when(jwtUtils.extractRole("valid-access-token")).thenReturn("admin");
-        when(refreshTokenService.revokeAllUserTokens(1L, "admin")).thenReturn(3);
+        when(refreshTokenService.revokeAllSessions(1L, "admin")).thenReturn(3);
 
         mockMvc.perform(post("/api/v1/auth/logout-all")
                         .header("Authorization", "Bearer valid-access-token"))

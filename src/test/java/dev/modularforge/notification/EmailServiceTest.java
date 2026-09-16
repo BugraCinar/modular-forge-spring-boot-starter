@@ -50,8 +50,9 @@ class EmailServiceTest {
         service.sendPasswordResetSuccessEmail("user@example.com", "Ada", "127.0.0.1");
         service.sendEmailChangeVerificationEmail("new@example.com", "change-token", "Ada");
         service.sendSystemNotificationEmail("Subject", "<p>Body</p>");
+        service.sendEmailChangeNotice("old@example.com", "new@example.com");
 
-        verify(mailSender, times(6)).send(any(MimeMessage.class));
+        verify(mailSender, times(7)).send(any(MimeMessage.class));
         verify(templateEngine).process(org.mockito.ArgumentMatchers.eq("verification-email"), any());
         verify(templateEngine).process(org.mockito.ArgumentMatchers.eq("password-reset-email"), any());
         verify(templateEngine, times(2)).process(org.mockito.ArgumentMatchers.eq("password-reset-success-email"), any());
@@ -70,6 +71,7 @@ class EmailServiceTest {
         assertThatCode(() -> service.sendEmailChangeVerificationEmail("new@example.com", "token", "Ada")).doesNotThrowAnyException();
         assertThatCode(() -> service.sendSystemNotificationEmail("subject", "body")).doesNotThrowAnyException();
 
+        assertThatCode(() -> service.sendEmailChangeNotice("old@example.com", "new@example.com")).doesNotThrowAnyException();
         verify(mailSender, never()).send(any(MimeMessage.class));
     }
 }

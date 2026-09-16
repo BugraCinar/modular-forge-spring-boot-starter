@@ -1,6 +1,5 @@
 package dev.modularforge.profile.dto;
 
-import dev.modularforge.identity.model.UserType;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

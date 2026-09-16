@@ -1,7 +1,5 @@
 package dev.modularforge.audit;
 
-import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.User;
 
 import dev.modularforge.audit.UserActivityLogRepository;
 import lombok.RequiredArgsConstructor;

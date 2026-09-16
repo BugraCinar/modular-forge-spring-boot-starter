@@ -1,8 +1,5 @@
 package dev.modularforge.twofactor;
 
-import dev.modularforge.identity.model.Role;
-import dev.modularforge.identity.model.User;
-import dev.modularforge.shared.error.ErrorResponse;
 
 import dev.modularforge.twofactor.dto.TwoFactorLoginRequest;
 import dev.modularforge.twofactor.dto.TwoFactorSetupResponse;
@@ -120,24 +117,24 @@ public class TwoFactorAuthController {
         log.info("2FA login verification for username: {}", request.getUsername());
 
         try {
-            boolean isValid = twoFactorAuthService.verifyCodeByUsername(
+            var authenticatedAdmin = twoFactorAuthService.completeLogin(
                 request.getUsername(),
                 request.getCode(),
                 request.getChallengeToken()
             );
 
-            if (!isValid) {
+            if (authenticatedAdmin.isEmpty()) {
                 Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("success", false);
                 errorResponse.put("message", "Invalid verification code or challenge token. Please try logging in again.");
                 log.warn("Invalid 2FA code or challenge token for username: {}", request.getUsername());
                 return ResponseEntity.status(401).body(errorResponse);
             }
-            Admin admin = twoFactorAuthService.markLoginSuccessful(request.getUsername());
+            Admin admin = authenticatedAdmin.orElseThrow();
             String accessToken = jwtUtils.generateAdminToken(
                     admin.getUsername(), admin.getId(), admin.getLevel(), admin.currentAuthVersion());
             RefreshToken refreshTokenEntity = refreshTokenService.createRefreshToken(
-                admin.getId(), "admin", httpRequest);
+                admin.getId(), "admin", admin.currentAuthVersion(), httpRequest);
 
             AuthResponse authResponse = AuthResponse.builder()
                 .success(true)

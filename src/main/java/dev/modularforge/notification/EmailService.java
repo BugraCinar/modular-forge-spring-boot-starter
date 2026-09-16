@@ -1,7 +1,5 @@
 package dev.modularforge.notification;
 
-import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.User;
 import dev.modularforge.shared.notification.NotificationGateway;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +32,22 @@ public class EmailService implements NotificationGateway {
 
     @Value("${app.admin.email:admin@example.com}")
     private String adminEmail;
+
+    @Async("emailExecutor")
+    public void sendEmailChangeNotice(String previousEmail, String requestedEmail) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(previousEmail);
+            helper.setSubject("Account email change requested");
+            helper.setText("A change of your account email to " + requestedEmail
+                    + " was requested. If this was not you, reset your password and contact support.");
+            mailSender.send(message);
+        } catch (MessagingException exception) {
+            log.error("Could not deliver an email change notice", exception);
+        }
+    }
 
     @Async("emailExecutor")
     public void sendVerificationEmail(String to, String token, String name) {

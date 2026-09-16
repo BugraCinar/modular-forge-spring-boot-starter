@@ -1,25 +1,16 @@
 package dev.modularforge.profile;
 
-import dev.modularforge.auth.AuthService;
 import dev.modularforge.auth.PasswordService;
 import dev.modularforge.auth.token.RefreshTokenService;
-import dev.modularforge.auth.token.TokenHashService;
-import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.Role;
-import dev.modularforge.identity.model.UserType;
-import dev.modularforge.shared.notification.NotificationGateway;
-import dev.modularforge.admin.dto.ChangePasswordRequest;
-import dev.modularforge.profile.dto.ChangeEmailRequest;
+import dev.modularforge.shared.dto.ChangePasswordRequest;
+import dev.modularforge.shared.dto.ChangeEmailRequest;
 import dev.modularforge.profile.dto.DeactivateAccountRequest;
 import dev.modularforge.profile.dto.UpdateUserProfileRequest;
 import dev.modularforge.profile.dto.UserProfileDTO;
 import dev.modularforge.shared.error.BadRequestException;
 import dev.modularforge.shared.error.ResourceNotFoundException;
 import dev.modularforge.identity.model.User;
-import dev.modularforge.auth.token.VerificationToken;
-import dev.modularforge.identity.AdminRepository;
 import dev.modularforge.identity.UserRepository;
-import dev.modularforge.auth.token.VerificationTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,12 +27,10 @@ import java.util.Locale;
 public class UserProfileService {
 
     private final UserRepository userRepository;
-    private final AdminRepository adminRepository;
     private final PasswordService passwordService;
     private final RefreshTokenService refreshTokenService;
-    private final VerificationTokenRepository verificationTokenRepository;
-    private final NotificationGateway emailService;
-    private final TokenHashService tokenHashService;
+
+    private final dev.modularforge.auth.EmailChangeService emailChanges;
     public UserProfileDTO getProfile(Long userId) {
         User user = findActiveUserById(userId);
         return mapToDTO(user);
@@ -51,11 +40,7 @@ public class UserProfileService {
         User user = findActiveUserById(userId);
 
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
-            if (userRepository.existsByEmail(request.getEmail()) ||
-                    adminRepository.existsByEmail(request.getEmail())) {
-                throw new BadRequestException("Email is already in use");
-            }
-            user.setEmail(request.getEmail());
+            throw new BadRequestException("Use the verified email change endpoint to change your email");
         }
 
         if (request.getFirstName() != null)
@@ -114,32 +99,7 @@ public class UserProfileService {
     }
     @Transactional
     public void requestEmailChange(Long userId, ChangeEmailRequest request) {
-        User user = findActiveUserById(userId);
-
-        if (!passwordService.verifyPassword(request.getCurrentPassword(), user.getSalt(), user.getPasswordHash())) {
-            throw new BadRequestException("Current password is incorrect");
-        }
-
-        String newEmail = request.getNewEmail().trim().toLowerCase(Locale.ROOT);
-
-        if (newEmail.equals(user.getEmail().toLowerCase(Locale.ROOT))) {
-            throw new BadRequestException("New email must be different from the current email");
-        }
-
-        if (userRepository.existsByEmail(newEmail) || adminRepository.existsByEmail(newEmail)) {
-            throw new BadRequestException("This email address is already in use");
-        }
-        user.setPendingEmail(newEmail);
-        userRepository.save(user);
-        verificationTokenRepository.deleteByUserIdAndRole(userId, "email_change");
-
-        VerificationToken token = createVerificationToken(userId, "email_change");
-        verificationTokenRepository.save(token);
-
-        String displayName = user.getFirstName() != null ? user.getFirstName() : user.getUsername();
-        emailService.sendEmailChangeVerificationEmail(newEmail, token.getToken(), displayName);
-
-        log.info("Email change requested for userId={} → pendingEmail={}", userId, newEmail);
+        emailChanges.request(userId, "user", request.getCurrentPassword(), request.getNewEmail());
     }
     public String getProfilePictureUrl(Long userId) {
         return findActiveUserById(userId).getProfilePicture();
@@ -180,10 +140,4 @@ public class UserProfileService {
                 .build();
     }
 
-    private VerificationToken createVerificationToken(Long userId, String role) {
-        String rawToken = tokenHashService.generateToken();
-        VerificationToken token = new VerificationToken(userId, role);
-        token.storeTokenMetadata(rawToken, tokenHashService.hashToken(rawToken), tokenHashService.preview(rawToken));
-        return token;
-    }
 }

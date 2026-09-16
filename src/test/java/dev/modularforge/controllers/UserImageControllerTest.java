@@ -94,7 +94,7 @@ class UserImageControllerTest extends BaseControllerTest {
         when(userProfileService.getProfilePictureUrl(eq(1L))).thenReturn(IMAGE_URL);
         when(imageUploadService.uploadProfileImage(any(), eq("USER"), eq(1L))).thenReturn(newUrl);
         when(userProfileService.updateProfilePicture(eq(1L), eq(newUrl))).thenReturn(sampleProfile(newUrl));
-        doNothing().when(imageUploadService).deleteImage(IMAGE_URL);
+        doNothing().when(imageUploadService).deleteProfileImage(IMAGE_URL, "user", 1L);
 
         mockMvc.perform(multipart("/api/v1/profile/image")
                         .file(file)
@@ -106,14 +106,14 @@ class UserImageControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.imageUrl").value(newUrl));
 
-        verify(imageUploadService).deleteImage(IMAGE_URL);
+        verify(imageUploadService).deleteProfileImage(IMAGE_URL, "user", 1L);
     }
 
     @Test
     @DisplayName("DELETE /profile/image → 200 with success=true")
     void deleteProfileImage_returns200() throws Exception {
         when(userProfileService.getProfilePictureUrl(eq(1L))).thenReturn(IMAGE_URL);
-        doNothing().when(imageUploadService).deleteImage(IMAGE_URL);
+        doNothing().when(imageUploadService).deleteProfileImage(IMAGE_URL, "user", 1L);
         when(userProfileService.updateProfilePicture(eq(1L), isNull())).thenReturn(sampleProfile(null));
 
         mockMvc.perform(delete("/api/v1/profile/image")

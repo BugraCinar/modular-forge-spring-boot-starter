@@ -56,9 +56,10 @@ class RefreshTokenServiceTest {
             when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
 
             RefreshToken saved = new RefreshToken(1L, "user", 30L);
+        saved.setIssuedAuthVersion(0L);
             when(refreshTokenRepository.save(any(RefreshToken.class))).thenReturn(saved);
 
-            RefreshToken result = refreshTokenService.createRefreshToken(1L, "user", httpRequest);
+            RefreshToken result = refreshTokenService.createRefreshToken(1L, "user", 0L, httpRequest);
 
             assertThat(result).isNotNull();
             verify(refreshTokenRepository).save(any(RefreshToken.class));
@@ -74,9 +75,10 @@ class RefreshTokenServiceTest {
 
             ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
             RefreshToken saved = new RefreshToken(2L, "user", 30L);
+        saved.setIssuedAuthVersion(0L);
             when(refreshTokenRepository.save(captor.capture())).thenReturn(saved);
 
-            refreshTokenService.createRefreshToken(2L, "user", httpRequest);
+            refreshTokenService.createRefreshToken(2L, "user", 0L, httpRequest);
 
             RefreshToken captured = captor.getValue();
             assertThat(captured.getDeviceInfo()).isEqualTo("Mozilla/5.0");
@@ -97,9 +99,10 @@ class RefreshTokenServiceTest {
 
             ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
             RefreshToken saved = new RefreshToken(3L, "admin", 30L);
+        saved.setIssuedAuthVersion(0L);
             when(refreshTokenRepository.save(captor.capture())).thenReturn(saved);
 
-            refreshTokenService.createRefreshToken(3L, "admin", httpRequest);
+            refreshTokenService.createRefreshToken(3L, "admin", 0L, httpRequest);
 
             assertThat(captor.getValue().getIpAddress()).isEqualTo("203.0.113.10");
         }
@@ -137,6 +140,7 @@ class RefreshTokenServiceTest {
         @DisplayName("Revoked token triggers revokeAllUserTokens and returns empty")
         void revokedToken_revokesAllAndReturnsEmpty() {
             RefreshToken revokedToken = new RefreshToken(10L, "user", 30L);
+        revokedToken.setIssuedAuthVersion(0L);
             revokedToken.setIsRevoked(true);
 
             when(refreshTokenRepository.findByToken("revoked-token")).thenReturn(Optional.of(revokedToken));
@@ -151,6 +155,7 @@ class RefreshTokenServiceTest {
         @DisplayName("Expired token returns empty Optional")
         void expiredToken_returnsEmpty() {
             RefreshToken expiredToken = new RefreshToken(11L, "user", 30L);
+        expiredToken.setIssuedAuthVersion(0L);
             expiredToken.setIsRevoked(false);
             expiredToken.setExpiryDate(LocalDateTime.now().minusDays(1));
 
@@ -166,6 +171,7 @@ class RefreshTokenServiceTest {
         @DisplayName("Valid token returns present Optional")
         void validToken_returnsToken() {
             RefreshToken validToken = new RefreshToken(12L, "admin", 30L);
+        validToken.setIssuedAuthVersion(0L);
             validToken.setIsRevoked(false);
 
             when(refreshTokenRepository.findByToken("valid-token")).thenReturn(Optional.of(validToken));
@@ -185,6 +191,7 @@ class RefreshTokenServiceTest {
         @DisplayName("Atomically consumes the old token before issuing a successor")
         void consumesOldTokenAtomically() {
             RefreshToken oldToken = new RefreshToken(20L, "user", 30L);
+        oldToken.setIssuedAuthVersion(0L);
             oldToken.setId(20L);
             oldToken.setIsRevoked(false);
 
@@ -194,6 +201,7 @@ class RefreshTokenServiceTest {
             when(httpRequest.getRemoteAddr()).thenReturn("1.2.3.4");
 
             RefreshToken newSaved = new RefreshToken(20L, "user", 30L);
+        newSaved.setIssuedAuthVersion(0L);
             when(refreshTokenRepository.save(any(RefreshToken.class))).thenReturn(newSaved);
             when(refreshTokenRepository.revokeIfActive(eq(20L), any(LocalDateTime.class))).thenReturn(1);
 
@@ -207,6 +215,7 @@ class RefreshTokenServiceTest {
         @DisplayName("Creates and returns a new token for the same user")
         void createsNewToken_forSameUser() {
             RefreshToken oldToken = new RefreshToken(21L, "user", 30L);
+        oldToken.setIssuedAuthVersion(0L);
             oldToken.setId(21L);
             oldToken.setIsRevoked(false);
 
@@ -216,6 +225,7 @@ class RefreshTokenServiceTest {
             when(httpRequest.getRemoteAddr()).thenReturn("1.2.3.4");
 
             RefreshToken newToken = new RefreshToken(21L, "user", 30L);
+        newToken.setIssuedAuthVersion(0L);
             when(refreshTokenRepository.save(any(RefreshToken.class))).thenReturn(newToken);
             when(refreshTokenRepository.revokeIfActive(eq(21L), any(LocalDateTime.class))).thenReturn(1);
 
@@ -229,6 +239,7 @@ class RefreshTokenServiceTest {
         @DisplayName("Lost consume race revokes the entire session family")
         void consumeRace_revokesAllTokensAndReturnsEmpty() {
             RefreshToken oldToken = new RefreshToken(22L, "admin", 30L);
+        oldToken.setIssuedAuthVersion(0L);
             oldToken.setId(22L);
 
             when(refreshTokenRepository.revokeIfActive(eq(22L), any(LocalDateTime.class))).thenReturn(0);
@@ -248,6 +259,7 @@ class RefreshTokenServiceTest {
         @DisplayName("Found token is revoked and method returns true")
         void found_revokesAndReturnsTrue() {
             RefreshToken token = new RefreshToken(30L, "user", 30L);
+        token.setIssuedAuthVersion(0L);
             token.setIsRevoked(false);
             when(refreshTokenRepository.findByToken("some-token")).thenReturn(Optional.of(token));
 

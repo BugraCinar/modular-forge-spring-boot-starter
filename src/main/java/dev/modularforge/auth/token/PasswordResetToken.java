@@ -1,14 +1,12 @@
 package dev.modularforge.auth.token;
 
-import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.Role;
-import dev.modularforge.identity.model.User;
 
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
 
 @Entity
+@org.springframework.data.mongodb.core.mapping.Document(collection = "password_reset_tokens")
 @Table(name = "password_reset_tokens", indexes = {
     @Index(name = "idx_password_reset_token", columnList = "token"),
     @Index(name = "idx_password_reset_token_hash", columnList = "token_hash"),
@@ -25,15 +23,18 @@ public class PasswordResetToken {
     private Long id;
 
     @Column(nullable = false, unique = true)
+    @org.springframework.data.mongodb.core.index.Indexed(unique = true, sparse = true)
     private String token;
 
     @Column(name = "token_hash", unique = true, length = 128)
+    @org.springframework.data.mongodb.core.index.Indexed(unique = true, sparse = true)
     private String tokenHash;
 
     @Column(name = "token_preview", length = 32)
     private String tokenPreview;
 
     @Transient
+    @org.springframework.data.annotation.Transient
     private String plaintextToken;
 
     @Column(name = "user_id", nullable = false)

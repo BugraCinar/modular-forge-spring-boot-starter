@@ -1,10 +1,5 @@
 package dev.modularforge.auth.dto;
 
-import dev.modularforge.auth.token.RefreshToken;
-import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.Role;
-import dev.modularforge.identity.model.User;
-import dev.modularforge.identity.model.UserType;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

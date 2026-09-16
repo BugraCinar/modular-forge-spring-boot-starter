@@ -25,6 +25,7 @@ class TokenEntityCoverageTest {
     @Test
     void refreshTokenValidityRequiresFutureExpiryAndNonRevokedState() {
         RefreshToken token = new RefreshToken();
+        token.setIssuedAuthVersion(0L);
         token.setExpiryDate(LocalDateTime.now().plusMinutes(1));
         token.setIsRevoked(false);
         assertThat(token.isValid()).isTrue();

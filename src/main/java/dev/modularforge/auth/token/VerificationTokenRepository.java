@@ -1,19 +1,15 @@
 package dev.modularforge.auth.token;
 
-import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.Role;
 
 import dev.modularforge.auth.token.VerificationToken;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-@Repository
-public interface VerificationTokenRepository extends JpaRepository<VerificationToken, Long> {
+@org.springframework.data.repository.NoRepositoryBean
+public interface VerificationTokenRepository extends dev.modularforge.shared.persistence.EntityRepository<VerificationToken> {
     Optional<VerificationToken> findByToken(String token);
     Optional<VerificationToken> findByTokenHash(String tokenHash);
     Optional<VerificationToken> findByUserIdAndRole(Long userId, String role);

@@ -1,8 +1,5 @@
 package dev.modularforge.storage.r2;
 
-import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.Role;
-import dev.modularforge.identity.model.User;
 
 import dev.modularforge.storage.r2.CloudflareR2Config;
 import dev.modularforge.profile.ProfileImageStorage;
@@ -52,6 +49,16 @@ public class ImageUploadService implements ProfileImageStorage {
 
         return getPublicUrl(key);
     }
+    public void deleteProfileImage(String imageUrl, String role, Long ownerId) {
+        String normalizedRole = normalizeRole(role);
+        String key = extractKeyFromUrl(imageUrl);
+        String prefix = "profiles/" + normalizedRole + "/profile_" + normalizedRole + "_" + ownerId + "_";
+        if (!key.startsWith(prefix)) {
+            throw new dev.modularforge.shared.error.ForbiddenException("Image does not belong to this account");
+        }
+        deleteImage(imageUrl);
+    }
+
     public void deleteImage(String imageUrl) {
         if (imageUrl == null || imageUrl.isEmpty()) {
             return;

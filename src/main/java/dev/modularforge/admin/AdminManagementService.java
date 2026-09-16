@@ -228,12 +228,12 @@ public class AdminManagementService {
             targetAdmin.setEmail(request.getEmail());
         }
         if (request.getFirstName() != null) {
-            changes.put("firstName", Map.of("old", targetAdmin.getFirstName(), "new", request.getFirstName()));
+            changes.put("firstName", change(targetAdmin.getFirstName(), request.getFirstName()));
             targetAdmin.setFirstName(request.getFirstName());
         }
 
         if (request.getLastName() != null) {
-            changes.put("lastName", Map.of("old", targetAdmin.getLastName(), "new", request.getLastName()));
+            changes.put("lastName", change(targetAdmin.getLastName(), request.getLastName()));
             targetAdmin.setLastName(request.getLastName());
         }
 
@@ -374,6 +374,13 @@ public class AdminManagementService {
 
         return mapToDTO(targetAdmin);
     }
+    private Map<String, Object> change(Object previous, Object next) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("old", previous);
+        result.put("new", next);
+        return result;
+    }
+
     private AdminManagementDTO mapToDTO(Admin admin) {
         return AdminManagementDTO.builder()
             .id(admin.getId())

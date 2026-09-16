@@ -1,6 +1,5 @@
 package dev.modularforge.audit;
 
-import dev.modularforge.identity.model.Role;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -14,6 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @Entity
+@org.springframework.data.mongodb.core.mapping.Document(collection = "sensitive_endpoint_access_logs")
 @Table(name = "sensitive_endpoint_access_logs", indexes = {
     @Index(name = "idx_sensitive_access_user_id", columnList = "user_id"),
     @Index(name = "idx_sensitive_access_role", columnList = "role"),
@@ -44,8 +44,7 @@ public class SensitiveEndpointAccessLog {
     @Column(name = "ip_address", length = 45)
     private String ipAddress;
 
-    @Lob
-    @Column(name = "user_agent")
+    @Column(name = "user_agent", columnDefinition = "TEXT")
     private String userAgent;
 
     @Column(name = "endpoint", nullable = false, length = 500)

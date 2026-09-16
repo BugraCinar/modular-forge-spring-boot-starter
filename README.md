@@ -9,7 +9,7 @@ A security-focused Spring Boot 4 REST API starter organized as removable feature
 - Argon2id password hashing with a separate application pepper
 - Email verification, password reset, account lockout, and CAPTCHA integration
 - Optional admin management, profile, audit, TOTP 2FA, R2 image storage, backups, Sentry, and OpenAPI modules
-- MySQL, PostgreSQL, MariaDB, and H2 build/runtime profiles
+- SQL/MongoDB repository adapters: MySQL, PostgreSQL, MariaDB, H2 and MongoDB profiles
 - Public module discovery at `GET /api/v1/modules`
 - Unit, slice, integration, module-boundary, and disabled-module context tests
 
@@ -32,6 +32,9 @@ Put independent 32-byte Base64 values in `PEPPER`, `TOKEN_HASH_SECRET`, and `JWT
 
 # PostgreSQL
 ./mvnw -Ddb=postgresql spring-boot:run -Dspring-boot.run.profiles=postgresql,dev
+
+# MongoDB (requires a replica set)
+./mvnw -Ddb=mongodb spring-boot:run -Dspring-boot.run.profiles=mongodb,dev
 
 # MariaDB
 ./mvnw -Ddb=mariadb spring-boot:run -Dspring-boot.run.profiles=mariadb,dev
@@ -75,7 +78,7 @@ The security audit profile runs OWASP Dependency-Check and fails for a known dep
 
 ## Production notes
 
-- Run with `prod` after a real schema migration system is in place; this profile uses Hibernate `validate`.
+- SQL schemas use Flyway and Hibernate `validate`; follow [database migration instructions](docs/DATABASES.md) before upgrading an existing database.
 - Keep `COOKIE_SECURE=true`, TLS at the trusted edge, and `FORWARD_HEADERS_STRATEGY=none` unless proxy headers are sanitized by that edge.
 - Redis is fail-closed by default because local-only rate limits are unsafe in a multi-instance deployment.
 - OpenAPI, seed accounts, R2, TOTP, backups, and observability are opt-in.
@@ -84,3 +87,7 @@ The security audit profile runs OWASP Dependency-Check and fails for a known dep
 ## License
 
 Released under [CC0 1.0](LICENSE).
+
+### Kafka application events
+
+Optional, disabled by default, and independent of SQL/MongoDB selection. Publishes verified account email changes after transaction commit. See [configuration, event schema and delivery limits](docs/modules/kafka.md).

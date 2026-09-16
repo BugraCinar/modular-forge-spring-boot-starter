@@ -1,8 +1,6 @@
 package dev.modularforge.audit;
 
 import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.Role;
-import dev.modularforge.identity.model.User;
 import dev.modularforge.shared.PaginationUtils;
 
 import dev.modularforge.audit.dto.SensitiveAccessLogListResponse;

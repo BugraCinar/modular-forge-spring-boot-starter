@@ -1,8 +1,5 @@
 package dev.modularforge.audit;
 
-import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.Role;
-import dev.modularforge.identity.model.User;
 
 import jakarta.persistence.*;
 import lombok.Data;
@@ -14,6 +11,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@org.springframework.data.mongodb.core.mapping.Document(collection = "user_activity_log")
 @Table(name = "user_activity_log", indexes = {
     @Index(name = "idx_user_activity_user", columnList = "user_id, role"),
     @Index(name = "idx_user_activity_action", columnList = "action"),
@@ -40,14 +38,13 @@ public class UserActivityLog {
     @Column(name = "resource_id", length = 100)
     private String resourceId; // Optional: ID of resource affected
 
-    @Column(name = "details", columnDefinition = "JSON")
+    @Column(name = "details", columnDefinition = "TEXT")
     private String details; // JSON string with additional action details
 
     @Column(name = "ip_address", length = 45)
     private String ipAddress;
 
-    @Lob
-    @Column(name = "user_agent")
+    @Column(name = "user_agent", columnDefinition = "TEXT")
     private String userAgent;
 
     @Column(name = "success", nullable = false)

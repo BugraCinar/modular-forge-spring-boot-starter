@@ -5,9 +5,9 @@ import dev.modularforge.identity.model.User;
 import dev.modularforge.profile.UserProfileController;
 
 import tools.jackson.databind.ObjectMapper;
-import dev.modularforge.admin.dto.ChangePasswordRequest;
+import dev.modularforge.shared.dto.ChangePasswordRequest;
 import dev.modularforge.profile.dto.DeactivateAccountRequest;
-import dev.modularforge.profile.dto.ChangeEmailRequest;
+import dev.modularforge.shared.dto.ChangeEmailRequest;
 import dev.modularforge.profile.dto.UpdateUserProfileRequest;
 import dev.modularforge.profile.dto.UserProfileDTO;
 import dev.modularforge.profile.UserProfileService;

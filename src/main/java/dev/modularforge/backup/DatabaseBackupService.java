@@ -31,8 +31,25 @@ public class DatabaseBackupService {
     private BiFunction<DatabaseTarget, Path, Boolean> dumpExecutor = this::createMySQLDump;
     private ProcessStarter processStarter = ProcessBuilder::start;
 
+    @Value("${app.database.provider:sql}")
+    private String provider;
+
+    @jakarta.annotation.PostConstruct
+    void validateProvider() {
+        if (!"sql".equals(provider)) throw new IllegalStateException("Built-in dump backup requires a MySQL/MariaDB SQL provider");
+        parseDatabaseTarget(databaseUrl);
+    }
+
     @Autowired
     private JavaMailSender mailSender;
+    @Autowired
+    private BackupCipher backupCipher;
+
+    @Value("${app.database.backup.ssl-ca:}")
+    private String sslCa;
+
+    @Value("${app.database.backup.mariadb-dump-path:mariadb-dump}")
+    private String mariadbDumpPath;
 
     @Value("${spring.datasource.url}")
     private String databaseUrl;
@@ -69,16 +86,19 @@ public class DatabaseBackupService {
         }
 
         Path backupPath = null;
+        Path encryptedPath = null;
         try {
             createBackupDirectory();
             String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
-            String backupFilename = String.format("modularforge_backup_%s.sql", timestamp);
+            String backupFilename = String.format("modularforge_backup_%s_%s.sql", timestamp, java.util.UUID.randomUUID());
             backupPath = Paths.get(backupDirectory, backupFilename);
             DatabaseTarget target = parseDatabaseTarget(databaseUrl);
             boolean backupSuccess = dumpExecutor.apply(target, backupPath);
 
             if (backupSuccess) {
-                emailBackup(backupPath.toFile(), timestamp, target.databaseName());
+                encryptedPath = backupCipher.encrypt(backupPath);
+                deleteBackupFile(backupPath);
+                emailBackup(encryptedPath.toFile(), timestamp, target.databaseName());
 
                 logger.info("Database backup completed successfully and emailed to: {}", recipientEmail);
             } else {
@@ -88,6 +108,7 @@ public class DatabaseBackupService {
         } catch (Exception e) {
             logger.error("Error during database backup process: {}", e.getMessage(), e);
         } finally {
+            if (encryptedPath != null) deleteBackupFile(encryptedPath);
             if (backupPath != null) {
                 deleteBackupFile(backupPath);
             }
@@ -117,14 +138,14 @@ public class DatabaseBackupService {
         if (port < 1 || port > 65535) {
             throw new IllegalStateException("The JDBC URL contains an invalid database port");
         }
-        return new DatabaseTarget(host, port, databaseName);
+        return new DatabaseTarget(host, port, databaseName, jdbcUrl.startsWith("jdbc:mariadb:"));
     }
 
     private boolean createMySQLDump(DatabaseTarget target, Path backupFile) {
         try {
             String backupFilePath = backupFile.toAbsolutePath().normalize().toString();
-            ProcessBuilder processBuilder = new ProcessBuilder(
-                mysqldumpPath,
+            java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of(
+                target.mariadb() ? mariadbDumpPath : mysqldumpPath,
                 "--host=" + target.host(),
                 "--port=" + target.port(),
                 "--user=" + databaseUsername,
@@ -132,8 +153,11 @@ public class DatabaseBackupService {
                 "--routines",
                 "--triggers",
                 "--result-file=" + backupFilePath,
-                target.databaseName()
-            );
+                target.mariadb() ? "--ssl-verify-server-cert" : "--ssl-mode=VERIFY_IDENTITY"
+            ));
+            if (sslCa != null && !sslCa.isBlank()) command.add("--ssl-ca=" + sslCa);
+            command.add(target.databaseName());
+            ProcessBuilder processBuilder = new ProcessBuilder(command);
             processBuilder.environment().put("MYSQL_PWD", databasePassword);
             processBuilder.redirectError(ProcessBuilder.Redirect.DISCARD);
 
@@ -178,7 +202,7 @@ public class DatabaseBackupService {
         String emailBody = String.format(
             "<html><body>" +
             "<h2>Modular Forge Database Backup</h2>" +
-            "<p>Please find attached the database backup for Modular Forge.</p>" +
+            "<p>The attached backup is encrypted. Use your separately stored backup key to restore it.</p>" +
             "<ul>" +
             "<li><strong>Backup Date:</strong> %s</li>" +
             "<li><strong>Database:</strong> %s</li>" +
@@ -221,7 +245,7 @@ public class DatabaseBackupService {
         return String.format("Database backup enabled. Daily backups sent to: %s", recipientEmail);
     }
 
-    private record DatabaseTarget(String host, int port, String databaseName) {
+    private record DatabaseTarget(String host, int port, String databaseName, boolean mariadb) {
     }
 
     @FunctionalInterface

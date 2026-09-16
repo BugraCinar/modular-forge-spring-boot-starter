@@ -11,12 +11,8 @@ import dev.modularforge.auth.dto.UserSessionDTO;
 import dev.modularforge.auth.dto.VerifyPasswordRequest;
 import dev.modularforge.auth.token.RefreshTokenService;
 import dev.modularforge.auth.token.TokenHashService;
-import dev.modularforge.identity.model.Role;
 import dev.modularforge.shared.notification.NotificationGateway;
 import dev.modularforge.ratelimit.RateLimitService;
-import dev.modularforge.shared.error.BadRequestException;
-import dev.modularforge.shared.error.ErrorResponse;
-import dev.modularforge.shared.error.ResourceNotFoundException;
 
 import dev.modularforge.auth.dto.*;
 import dev.modularforge.identity.model.Admin;
@@ -83,6 +79,9 @@ public class AuthService {
 
     @Autowired(required = false)
     private SecondFactorGateway secondFactorGateway;
+
+    @Autowired
+    private EmailChangeService emailChanges;
     @Transactional
     public AuthResponse register(RegisterRequest request, HttpServletRequest httpRequest) {
         try {
@@ -242,7 +241,7 @@ public class AuthService {
 
         String accessToken = jwtUtils.generateUserToken(user.getUsername(), user.getId(),
                 user.getUserType().name().toLowerCase(Locale.ROOT), user.currentAuthVersion());
-        RefreshToken refreshTokenEntity = refreshTokenService.createRefreshToken(user.getId(), "user", httpRequest);
+        RefreshToken refreshTokenEntity = refreshTokenService.createRefreshToken(user.getId(), "user", user.currentAuthVersion(), httpRequest);
 
         return AuthResponse.builder()
                 .success(true)
@@ -289,6 +288,7 @@ public class AuthService {
         admin.setLoginAttempts(0);
         admin.setLockedUntil(null);
 
+        adminRepository.save(admin);
         Optional<SecondFactorGateway.Challenge> secondFactorChallenge = secondFactorGateway == null
                 ? Optional.empty()
                 : secondFactorGateway.beginChallenge(admin.getId());
@@ -311,7 +311,7 @@ public class AuthService {
 
         String accessToken = jwtUtils.generateAdminToken(
                 admin.getUsername(), admin.getId(), admin.getLevel(), admin.currentAuthVersion());
-        RefreshToken refreshTokenEntity = refreshTokenService.createRefreshToken(admin.getId(), "admin", httpRequest);
+        RefreshToken refreshTokenEntity = refreshTokenService.createRefreshToken(admin.getId(), "admin", admin.currentAuthVersion(), httpRequest);
 
         return AuthResponse.builder()
                 .success(true)
@@ -590,47 +590,8 @@ public class AuthService {
     }
     @Transactional
     public Map<String, Object> verifyEmailChange(String token) {
-        VerificationToken vt = findVerificationToken(token)
-                .orElseThrow(() -> new dev.modularforge.shared.error.BadRequestException(
-                        "Invalid or expired email change token"));
-
-        if (!"email_change".equals(vt.getRole())) {
-            throw new dev.modularforge.shared.error.BadRequestException("Invalid token type");
-        }
-
-        if (vt.isExpired()) {
-            verificationTokenRepository.delete(vt);
-            throw new dev.modularforge.shared.error.BadRequestException(
-                    "Email change token has expired. Please request a new one.");
-        }
-
-        User user = userRepository.findById(vt.getUserId())
-                .orElseThrow(() -> new dev.modularforge.shared.error.ResourceNotFoundException(
-                        "User not found with ID: " + vt.getUserId()));
-
-        if (user.getPendingEmail() == null || user.getPendingEmail().isBlank()) {
-            verificationTokenRepository.delete(vt);
-            throw new dev.modularforge.shared.error.BadRequestException(
-                    "No pending email change found for this account");
-        }
-
-        String newEmail = user.getPendingEmail();
-        if (userRepository.existsByEmail(newEmail) || adminRepository.existsByEmail(newEmail)) {
-            user.setPendingEmail(null);
-            userRepository.save(user);
-            verificationTokenRepository.delete(vt);
-            throw new dev.modularforge.shared.error.BadRequestException("This email address is already in use");
-        }
-
-        user.setEmail(newEmail);
-        user.setPendingEmail(null);
-        user.setEmailVerified(true);
-        userRepository.save(user);
-
-        verificationTokenRepository.delete(vt);
-        log.info("Email change verified for userId={} → new email={}", user.getId(), newEmail);
-
-        return Map.of("success", true, "message", "Email address updated successfully.");
+        emailChanges.confirm(token);
+        return Map.of("success", true, "message", "Email address updated successfully. Please login again.");
     }
 
     private AuthResponse errorResponse(String message) {

@@ -4,7 +4,7 @@ import dev.modularforge.auth.PasswordService;
 import dev.modularforge.auth.token.RefreshTokenService;
 
 import dev.modularforge.admin.dto.AdminProfileDTO;
-import dev.modularforge.admin.dto.ChangePasswordRequest;
+import dev.modularforge.shared.dto.ChangePasswordRequest;
 import dev.modularforge.admin.dto.UpdateAdminProfileRequest;
 import dev.modularforge.shared.error.BadRequestException;
 import dev.modularforge.shared.error.ResourceNotFoundException;
@@ -48,12 +48,7 @@ public class AdminProfileService {
         Admin admin = adminRepository.findById(adminId)
             .orElseThrow(() -> new ResourceNotFoundException("Admin not found with ID: " + adminId));
         if (request.getEmail() != null && !request.getEmail().equals(admin.getEmail())) {
-            if (adminRepository.existsByEmail(request.getEmail()) ||
-                userRepository.existsByEmail(request.getEmail())) {
-                throw new BadRequestException("Email is already in use");
-            }
-            admin.setEmail(request.getEmail());
-            log.info("Email changed for admin ID: {}", adminId);
+            throw new BadRequestException("Use the verified email change endpoint to change your email");
         }
         if (request.getFirstName() != null) {
             admin.setFirstName(request.getFirstName());
@@ -63,8 +58,8 @@ public class AdminProfileService {
             admin.setLastName(request.getLastName());
         }
 
-        if (request.getProfilePicture() != null) {
-            admin.setProfilePicture(request.getProfilePicture());
+        if (request.getProfilePicture() != null && !request.getProfilePicture().equals(admin.getProfilePicture())) {
+            throw new BadRequestException("Use the image upload endpoint to change your profile picture");
         }
 
         admin = adminRepository.save(admin);
@@ -123,7 +118,7 @@ public class AdminProfileService {
 
         Admin requestingAdmin = adminRepository.findById(requestingAdminId)
             .orElseThrow(() -> new ResourceNotFoundException("Requesting admin not found with ID: " + requestingAdminId));
-        if (requestingAdmin.getLevel() > admin.getLevel()) {
+        if (!canManage(requestingAdmin, admin)) {
             throw new BadRequestException("You don't have permission to deactivate this admin account");
         }
         if (admin.getLevel() == 0) {
@@ -146,7 +141,7 @@ public class AdminProfileService {
 
         Admin requestingAdmin = adminRepository.findById(requestingAdminId)
             .orElseThrow(() -> new ResourceNotFoundException("Requesting admin not found with ID: " + requestingAdminId));
-        if (requestingAdmin.getLevel() > admin.getLevel()) {
+        if (!canManage(requestingAdmin, admin)) {
             throw new BadRequestException("You don't have permission to reactivate this admin account");
         }
 
@@ -155,6 +150,11 @@ public class AdminProfileService {
 
         log.info("Account reactivated successfully for admin ID: {}", adminId);
     }
+    private boolean canManage(Admin actor, Admin target) {
+        return !actor.getId().equals(target.getId())
+                && (actor.getLevel() == 0 || (actor.getLevel() == 1 && target.getLevel() == 2));
+    }
+
     public boolean verifyProfileImageOwnership(Long adminId, String imageUrl) {
         log.debug("Verifying profile image ownership for admin ID: {} and URL: {}", adminId, imageUrl);
 

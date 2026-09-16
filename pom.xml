@@ -37,6 +37,22 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-mongodb</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
         <dependency>
@@ -115,6 +131,18 @@
             <artifactId>jjwt-jackson</artifactId>
             <version>0.13.0</version>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- removable module: dev.modularforge.kafka -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka-test</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <!-- removable module: dev.modularforge.storage.r2 -->
@@ -234,6 +262,7 @@
                 <configuration>
                     <systemPropertyVariables>
                         <sentry.dsn></sentry.dsn>
+                        <user.timezone>UTC</user.timezone>
                         <debug>false</debug>
                         <logging.level.root>WARN</logging.level.root>
                     </systemPropertyVariables>
@@ -294,6 +323,10 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>db-mongodb</id>
+            <activation><property><name>db</name><value>mongodb</value></property></activation>
+        </profile>
         <profile>
             <id>db-mysql</id>
             <activation><property><name>!db</name></property></activation>

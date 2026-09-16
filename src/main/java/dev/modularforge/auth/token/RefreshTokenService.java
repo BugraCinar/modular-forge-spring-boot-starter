@@ -1,7 +1,6 @@
 package dev.modularforge.auth.token;
 
 import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.Role;
 import dev.modularforge.identity.model.User;
 
 import dev.modularforge.auth.token.dto.RefreshTokenResponse;
@@ -43,11 +42,19 @@ public class RefreshTokenService {
     @Autowired
     private TokenHashService tokenHashService;
     public RefreshToken createRefreshToken(Long userId, String role, HttpServletRequest request) {
+        long authVersion = "admin".equals(role)
+                ? adminRepository.findById(userId).orElseThrow().currentAuthVersion()
+                : userRepository.findById(userId).orElseThrow().currentAuthVersion();
+        return createRefreshToken(userId, role, authVersion, request);
+    }
+
+    public RefreshToken createRefreshToken(Long userId, String role, long authVersion, HttpServletRequest request) {
         long expirationDays = jwtUtils.getRefreshTokenExpirationDays();
         log.info("Creating refresh token for userId={}, role={}, expirationDays={}", userId, role, expirationDays);
 
         String rawToken = tokenHashService.generateToken();
         RefreshToken refreshToken = new RefreshToken(userId, role, expirationDays);
+        refreshToken.setIssuedAuthVersion(authVersion);
         refreshToken.storeTokenMetadata(rawToken, tokenHashService.hashToken(rawToken), tokenHashService.preview(rawToken));
         refreshToken.setDeviceInfo(extractDeviceInfo(request));
         refreshToken.setIpAddress(getClientIpAddress(request));
@@ -58,6 +65,7 @@ public class RefreshTokenService {
                 saved.getId(), saved.getTokenPreview(), saved.getExpiryDate());
         return saved;
     }
+    @Transactional
     public Optional<RefreshToken> verifyRefreshToken(String token) {
         if (token == null || token.isEmpty()) {
             log.warn("Refresh token is null or empty");
@@ -77,7 +85,7 @@ public class RefreshTokenService {
         if (refreshToken.getIsRevoked()) {
             log.error("WARNING: Revoked refresh token reuse detected for userId={} role={}",
                     refreshToken.getUserId(), refreshToken.getRole());
-            refreshTokenRepository.revokeAllUserTokens(refreshToken.getUserId(), refreshToken.getRole());
+            revokeAllSessions(refreshToken.getUserId(), refreshToken.getRole());
             return Optional.empty();
         }
         if (refreshToken.isExpired()) {
@@ -91,15 +99,17 @@ public class RefreshTokenService {
     }
     @Transactional
     public Optional<RefreshToken> rotateRefreshToken(RefreshToken oldToken, HttpServletRequest request) {
+        if (oldToken.getIssuedAuthVersion() == null) return Optional.empty();
         int consumed = refreshTokenRepository.revokeIfActive(oldToken.getId(), LocalDateTime.now());
         if (consumed != 1) {
-            refreshTokenRepository.revokeAllUserTokens(oldToken.getUserId(), oldToken.getRole());
+            revokeAllSessions(oldToken.getUserId(), oldToken.getRole());
             log.warn("Refresh token rotation lost a consume race for userId={} role={}",
                     oldToken.getUserId(), oldToken.getRole());
             return Optional.empty();
         }
 
-        return Optional.of(createRefreshToken(oldToken.getUserId(), oldToken.getRole(), request));
+        return Optional.of(createRefreshToken(oldToken.getUserId(), oldToken.getRole(),
+                oldToken.getIssuedAuthVersion(), request));
     }
     @Transactional
     public boolean revokeRefreshToken(String token) {
@@ -118,6 +128,24 @@ public class RefreshTokenService {
     }
     @Transactional
     public int revokeAllUserTokens(Long userId, String role) {
+        return refreshTokenRepository.revokeAllUserTokens(userId, role);
+    }
+
+    @Transactional
+    public int revokeAllSessions(Long userId, String role) {
+        if ("user".equals(role)) {
+            userRepository.findById(userId).ifPresent(user -> {
+                user.invalidateAccessTokens();
+                userRepository.saveAndFlush(user);
+            });
+        } else if ("admin".equals(role)) {
+            adminRepository.findById(userId).ifPresent(admin -> {
+                admin.invalidateAccessTokens();
+                adminRepository.saveAndFlush(admin);
+            });
+        } else {
+            throw new IllegalArgumentException("Unsupported account role");
+        }
         return refreshTokenRepository.revokeAllUserTokens(userId, role);
     }
     @Transactional

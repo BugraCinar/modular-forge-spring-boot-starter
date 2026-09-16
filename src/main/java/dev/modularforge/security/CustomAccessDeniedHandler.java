@@ -1,6 +1,5 @@
 package dev.modularforge.security;
 
-import dev.modularforge.identity.model.Role;
 import dev.modularforge.identity.model.User;
 
 import tools.jackson.databind.ObjectMapper;

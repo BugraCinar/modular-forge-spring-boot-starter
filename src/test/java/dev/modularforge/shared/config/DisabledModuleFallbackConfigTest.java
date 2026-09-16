@@ -67,6 +67,7 @@ class DisabledModuleFallbackConfigTest {
         assertUnavailable(() -> gateway.sendVerificationEmail("a@b.test", "name", "token"));
         assertUnavailable(() -> gateway.sendPasswordResetEmail("a@b.test", "name", "token"));
         assertUnavailable(() -> gateway.sendEmailChangeVerificationEmail("a@b.test", "name", "token"));
+        assertUnavailable(() -> gateway.sendEmailChangeNotice("old", "new"));
         assertUnavailable(() -> gateway.sendSystemNotificationEmail("subject", "body"));
     }
 

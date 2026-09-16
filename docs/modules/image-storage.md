@@ -15,3 +15,7 @@ It owns user/admin image endpoints, `CloudflareR2Config`, and `ImageUploadServic
 7. Run `./mvnw clean verify`.
 
 A replacement implements `ProfileImageStorage` and owns its own upload endpoints/configuration. URL ownership checks must parse and compare origin/path exactly.
+
+## Persistence and security behavior
+
+Delete and replacement cleanup also validate the object key against `profiles/{role}/profile_{role}_{accountId}_...`. A matching stored URL alone cannot authorize deleting another account's object.

@@ -7,8 +7,8 @@ import dev.modularforge.identity.model.Admin;
 import dev.modularforge.notification.EmailService;
 import dev.modularforge.profile.UserProfileService;
 
-import dev.modularforge.admin.dto.ChangePasswordRequest;
-import dev.modularforge.profile.dto.ChangeEmailRequest;
+import dev.modularforge.shared.dto.ChangePasswordRequest;
+import dev.modularforge.shared.dto.ChangeEmailRequest;
 import dev.modularforge.profile.dto.DeactivateAccountRequest;
 import dev.modularforge.profile.dto.UpdateUserProfileRequest;
 import dev.modularforge.profile.dto.UserProfileDTO;
@@ -61,11 +61,13 @@ class UserProfileServiceTest {
 
     @BeforeEach
     void setUp() {
+        org.springframework.test.util.ReflectionTestUtils.setField(userProfileService, "emailChanges",
+                new dev.modularforge.auth.EmailChangeService(userRepository, adminRepository, passwordService, verificationTokenRepository, tokenHashService, emailService, refreshTokenService, mock(org.springframework.context.ApplicationEventPublisher.class)));
         activeUser = new User();
         activeUser.setId(1L);
         activeUser.setUsername("testUser");
         activeUser.setEmail("user@test.com");
-        activeUser.setFirstName("John");
+        activeUser.setFirstName("testUser");
         activeUser.setLastName("Doe");
         activeUser.setIsActive(true);
         activeUser.setEmailVerified(true);
@@ -133,11 +135,10 @@ class UserProfileServiceTest {
         req.setEmail("taken@test.com");
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(activeUser));
-        when(userRepository.existsByEmail("taken@test.com")).thenReturn(true);
 
         assertThatThrownBy(() -> userProfileService.updateProfile(1L, req))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("Email is already in use");
+                .hasMessageContaining("verified email change");
 
         verify(userRepository, never()).save(any());
     }
@@ -159,17 +160,15 @@ class UserProfileServiceTest {
     @Test
     void updateProfileAppliesEmailLastNameAndPhoneWhenAvailable() {
         UpdateUserProfileRequest request = new UpdateUserProfileRequest();
-        request.setEmail("new@test.com");
+        request.setEmail("user@test.com");
         request.setLastName("Updated");
         request.setPhone("+905551112233");
         when(userRepository.findById(1L)).thenReturn(Optional.of(activeUser));
-        when(userRepository.existsByEmail("new@test.com")).thenReturn(false);
-        when(adminRepository.existsByEmail("new@test.com")).thenReturn(false);
         when(userRepository.save(activeUser)).thenReturn(activeUser);
 
         UserProfileDTO result = userProfileService.updateProfile(1L, request);
 
-        assertThat(result.getEmail()).isEqualTo("new@test.com");
+        assertThat(result.getEmail()).isEqualTo("user@test.com");
         assertThat(result.getLastName()).isEqualTo("Updated");
         assertThat(result.getPhone()).isEqualTo("+905551112233");
     }
@@ -179,8 +178,6 @@ class UserProfileServiceTest {
         UpdateUserProfileRequest request = new UpdateUserProfileRequest();
         request.setEmail("admin@test.com");
         when(userRepository.findById(1L)).thenReturn(Optional.of(activeUser));
-        when(userRepository.existsByEmail("admin@test.com")).thenReturn(false);
-        when(adminRepository.existsByEmail("admin@test.com")).thenReturn(true);
 
         assertThatThrownBy(() -> userProfileService.updateProfile(1L, request))
                 .isInstanceOf(BadRequestException.class);
@@ -319,7 +316,7 @@ class UserProfileServiceTest {
 
         assertThatThrownBy(() -> userProfileService.requestEmailChange(1L, req))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("different from the current email");
+                .hasMessageContaining("unchanged");
     }
 
     @Test
@@ -357,7 +354,6 @@ class UserProfileServiceTest {
         when(passwordService.verifyPassword("CorrectPass1!", "salt", "hash")).thenReturn(true);
         when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
         when(adminRepository.existsByEmail("new@example.com")).thenReturn(false);
-        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(verificationTokenRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(tokenHashService.generateToken()).thenReturn("raw-email-change-token");
         when(tokenHashService.hashToken("raw-email-change-token")).thenReturn("hashed-email-change-token");
@@ -365,9 +361,10 @@ class UserProfileServiceTest {
 
         userProfileService.requestEmailChange(1L, req);
 
-        verify(userRepository).save(argThat(u -> "new@example.com".equals(u.getPendingEmail())));
+        assertThat(activeUser.getEmail()).isEqualTo("user@test.com");
+        verify(userRepository, never()).save(any());
         verify(verificationTokenRepository)
-                .save(argThat(t -> "email_change".equals(t.getRole())
+                .save(argThat(t -> "user_email_change".equals(t.getRole())
                         && t.getUserId().equals(1L)
                         && "hashed-email-change-token".equals(t.getTokenHash())
                         && "raw-emai...token".equals(t.getTokenPreview())

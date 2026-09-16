@@ -1,23 +1,18 @@
 package dev.modularforge.audit;
 
-import dev.modularforge.identity.model.Role;
-import dev.modularforge.identity.model.User;
 
 import dev.modularforge.audit.UserActivityLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Repository
-public interface UserActivityLogRepository extends JpaRepository<UserActivityLog, Long>, JpaSpecificationExecutor<UserActivityLog> {
+@org.springframework.data.repository.NoRepositoryBean
+public interface UserActivityLogRepository extends dev.modularforge.shared.persistence.EntityRepository<UserActivityLog> {
+    Page<UserActivityLog> findWithFilters(Long userId, String role, String action, String resourceType,
+                                        Boolean success, LocalDateTime startDate, LocalDateTime endDate,
+                                        String ipAddress, Pageable pageable);
     Page<UserActivityLog> findByUserIdAndRoleOrderByCreatedAtDesc(Long userId, String role, Pageable pageable);
 
     List<UserActivityLog> findByUserIdAndRoleOrderByCreatedAtDesc(Long userId, String role);
@@ -25,34 +20,27 @@ public interface UserActivityLogRepository extends JpaRepository<UserActivityLog
     Page<UserActivityLog> findByActionOrderByCreatedAtDesc(String action, Pageable pageable);
     Page<UserActivityLog> findByActionAndRoleOrderByCreatedAtDesc(String action, String role, Pageable pageable);
     Page<UserActivityLog> findAllByOrderByCreatedAtDesc(Pageable pageable);
-    @Query("SELECT ual FROM UserActivityLog ual WHERE ual.createdAt >= :startDate ORDER BY ual.createdAt DESC")
-    Page<UserActivityLog> findByCreatedAtAfterOrderByCreatedAtDesc(@Param("startDate") LocalDateTime startDate, Pageable pageable);
-    @Query("SELECT ual FROM UserActivityLog ual WHERE ual.role = :role AND ual.createdAt >= :startDate ORDER BY ual.createdAt DESC")
+    Page<UserActivityLog> findByCreatedAtAfterOrderByCreatedAtDesc(LocalDateTime startDate, Pageable pageable);
     Page<UserActivityLog> findByRoleAndCreatedAtAfterOrderByCreatedAtDesc(
-            @Param("role") String role,
-            @Param("startDate") LocalDateTime startDate,
+            String role,
+            LocalDateTime startDate,
             Pageable pageable
     );
-    @Query("SELECT ual FROM UserActivityLog ual WHERE ual.userId = :userId AND ual.role = :role AND ual.createdAt >= :startDate ORDER BY ual.createdAt DESC")
     Page<UserActivityLog> findByUserIdAndRoleAndCreatedAtAfterOrderByCreatedAtDesc(
-            @Param("userId") Long userId,
-            @Param("role") String role,
-            @Param("startDate") LocalDateTime startDate,
+            Long userId,
+            String role,
+            LocalDateTime startDate,
             Pageable pageable
     );
-    @Query("SELECT COUNT(ual) FROM UserActivityLog ual WHERE ual.userId = :userId AND ual.role = :role AND ual.createdAt >= :date")
     long countByUserIdAndRoleAndCreatedAtAfter(
-            @Param("userId") Long userId,
-            @Param("role") String role,
-            @Param("date") LocalDateTime date
+            Long userId,
+            String role,
+            LocalDateTime date
     );
     Page<UserActivityLog> findByUserIdAndRoleAndSuccessFalseOrderByCreatedAtDesc(Long userId, String role, Pageable pageable);
     Page<UserActivityLog> findByIpAddressOrderByCreatedAtDesc(String ipAddress, Pageable pageable);
-    @Query("SELECT COUNT(ual) FROM UserActivityLog ual WHERE ual.action = :action AND ual.createdAt >= :since")
-    long countByActionSince(@Param("action") String action, @Param("since") LocalDateTime since);
+    long countByActionSince(String action, LocalDateTime since);
     long countBySuccessAndCreatedAtAfter(boolean success, LocalDateTime date);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("DELETE FROM UserActivityLog u WHERE u.createdAt < :before")
-    int deleteByCreatedAtBefore(@Param("before") LocalDateTime before);
+    int deleteByCreatedAtBefore(LocalDateTime before);
 }

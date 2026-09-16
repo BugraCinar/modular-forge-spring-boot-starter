@@ -1,14 +1,12 @@
 package dev.modularforge.auth.token;
 
-import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.Role;
-import dev.modularforge.identity.model.User;
 
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
 
 @Entity
+@org.springframework.data.mongodb.core.mapping.Document(collection = "verification_tokens")
 @Table(name = "verification_tokens", indexes = {
     @Index(name = "idx_verification_token", columnList = "token"),
     @Index(name = "idx_verification_token_hash", columnList = "token_hash"),
@@ -19,20 +17,32 @@ import java.time.LocalDateTime;
 })
 @Data
 public class VerificationToken {
+    @Version
+    @Column(name = "row_version", nullable = false)
+    private Long rowVersion;
+
+    @Column(name = "requested_email", length = 255)
+    private String requestedEmail;
+
+    @Column(name = "issued_auth_version")
+    private Long issuedAuthVersion;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, unique = true)
+    @org.springframework.data.mongodb.core.index.Indexed(unique = true, sparse = true)
     private String token;
 
     @Column(name = "token_hash", unique = true, length = 128)
+    @org.springframework.data.mongodb.core.index.Indexed(unique = true, sparse = true)
     private String tokenHash;
 
     @Column(name = "token_preview", length = 32)
     private String tokenPreview;
 
     @Transient
+    @org.springframework.data.annotation.Transient
     private String plaintextToken;
 
     @Column(name = "user_id", nullable = false)

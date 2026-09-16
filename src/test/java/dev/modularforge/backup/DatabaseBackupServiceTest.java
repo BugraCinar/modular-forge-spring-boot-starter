@@ -41,6 +41,10 @@ class DatabaseBackupServiceTest {
     @BeforeEach
     void setUp() {
         service = new DatabaseBackupService();
+        ReflectionTestUtils.setField(service, "backupCipher", new BackupCipher(java.util.Base64.getEncoder().encodeToString(new byte[32])));
+        ReflectionTestUtils.setField(service, "sslCa", "");
+        ReflectionTestUtils.setField(service, "mysqldumpPath", "mysqldump");
+        ReflectionTestUtils.setField(service, "mariadbDumpPath", "mariadb-dump");
         ReflectionTestUtils.setField(service, "mailSender", mailSender);
         ReflectionTestUtils.setField(service, "databaseUrl", "jdbc:mysql://db.example.com:3307/app_db?useSSL=true");
         ReflectionTestUtils.setField(service, "databaseUsername", "backup-user");
@@ -190,5 +194,31 @@ class DatabaseBackupServiceTest {
                 throw new IllegalStateException(exception);
             }
         };
+    }
+
+    @Test void backupRejectsOtherProvidersAndKeepsTlsVerificationInDumpCommand() throws Exception {
+        ReflectionTestUtils.setField(service, "provider", "mongodb");
+        assertThatThrownBy(service::validateProvider).isInstanceOf(IllegalStateException.class);
+        ReflectionTestUtils.setField(service, "provider", "sql"); service.validateProvider();
+        ReflectionTestUtils.setField(service, "sslCa", "/test/ca.pem");
+        ReflectionTestUtils.setField(service, "processStarter", (DatabaseBackupService.ProcessStarter) builder -> {
+            assertThat(builder.command()).contains("mariadb-dump", "--ssl-verify-server-cert", "--ssl-ca=/test/ca.pem");
+            assertThat(builder.command()).noneMatch(arg -> arg.contains("secret"));
+            throw new java.io.IOException("test does not launch a process");
+        });
+        Object maria = ReflectionTestUtils.invokeMethod(service, "parseDatabaseTarget", "jdbc:mariadb://localhost/app");
+        assertThat(ReflectionTestUtils.<Boolean>invokeMethod(service, "createMySQLDump", maria, tempDirectory.resolve("dump.sql"))).isFalse();
+    }
+
+
+    @Test void nullCaStillRequiresCertificateAndHostnameValidation() {
+        ReflectionTestUtils.setField(service, "sslCa", (Object) null);
+        ReflectionTestUtils.setField(service, "processStarter", (DatabaseBackupService.ProcessStarter) builder -> {
+            assertThat(builder.command()).contains("--ssl-mode=VERIFY_IDENTITY");
+            assertThat(builder.command()).noneMatch(value -> value.startsWith("--ssl-ca="));
+            throw new java.io.IOException("test does not launch a process");
+        });
+        Object target = ReflectionTestUtils.invokeMethod(service, "parseDatabaseTarget", "jdbc:mysql://localhost/app");
+        assertThat(ReflectionTestUtils.<Boolean>invokeMethod(service, "createMySQLDump", target, tempDirectory.resolve("dump.sql"))).isFalse();
     }
 }

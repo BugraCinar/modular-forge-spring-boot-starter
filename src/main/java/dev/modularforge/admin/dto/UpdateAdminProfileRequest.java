@@ -1,6 +1,5 @@
 package dev.modularforge.admin.dto;
 
-import dev.modularforge.identity.model.Admin;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;

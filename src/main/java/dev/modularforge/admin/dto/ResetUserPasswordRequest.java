@@ -1,6 +1,5 @@
 package dev.modularforge.admin.dto;
 
-import dev.modularforge.identity.model.Admin;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

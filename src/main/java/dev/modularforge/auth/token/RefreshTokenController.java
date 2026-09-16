@@ -1,8 +1,6 @@
 package dev.modularforge.auth.token;
 
-import dev.modularforge.identity.model.Role;
 import dev.modularforge.identity.model.User;
-import dev.modularforge.identity.model.UserType;
 
 import dev.modularforge.auth.token.dto.RefreshTokenRequest;
 import dev.modularforge.identity.model.Admin;
@@ -103,6 +101,12 @@ public class RefreshTokenController {
                 userType = userOpt.get().getUserType().name().toLowerCase(Locale.ROOT);
                 authVersion = userOpt.get().currentAuthVersion();
             }
+            if (oldRefreshToken.getIssuedAuthVersion() == null || oldRefreshToken.getIssuedAuthVersion() != authVersion) {
+                refreshTokenService.revokeRefreshToken(refreshTokenStr);
+                clearRefreshTokenCookie(httpResponse);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Session has been invalidated. Please login again."));
+            }
             Optional<RefreshToken> newRefreshTokenOpt = refreshTokenService.rotateRefreshToken(oldRefreshToken, httpRequest);
             if (newRefreshTokenOpt.isEmpty()) {
                 clearRefreshTokenCookie(httpResponse);
@@ -199,7 +203,7 @@ public class RefreshTokenController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("error", "Invalid access token"));
             }
-            int revokedCount = refreshTokenService.revokeAllUserTokens(userId, role);
+            int revokedCount = refreshTokenService.revokeAllSessions(userId, role);
             clearRefreshTokenCookie(httpResponse);
 
             Map<String, Object> response = new HashMap<>();

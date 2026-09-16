@@ -20,7 +20,7 @@ public class ModuleCatalogService {
 
     public List<ModuleDefinition> catalog() {
         return List.of(
-                required("identity", "Identity", "User and admin account records.",
+                required("identity", "Identity", "User and admin account records using the " + environment.getProperty("app.database.provider", "sql") + " provider.",
                         "dev.modularforge.identity", List.of()),
                 required("authentication", "Authentication", "Login, registration, password and token flows.",
                         "dev.modularforge.auth", List.of("identity", "security", "rate-limit", "notification-email")),
@@ -46,7 +46,7 @@ public class ModuleCatalogService {
                 optional("audit", "Security audit trail", "Admin activity, authentication failures and sensitive-access logs.",
                         "dev.modularforge.audit", "app.modules.audit.enabled", true,
                         List.of("identity", "security")),
-                optional("database-backup", "Database backup", "Scheduled MySQL dumps delivered over email.",
+                optional("database-backup", "Database backup", "Encrypted MySQL/MariaDB dumps delivered over email.",
                         "dev.modularforge.backup", "app.modules.database-backup.enabled", false,
                         List.of("notification-email", "security")),
                 optional("observability", "Sentry observability", "Error reporting and an opt-in verification endpoint.",
@@ -55,6 +55,8 @@ public class ModuleCatalogService {
                 optional("api-docs", "OpenAPI documentation", "Swagger UI for development environments.",
                         "dev.modularforge.observability", "app.swagger.enabled", false,
                         List.of("security")),
+                optional("kafka", "Kafka application events", "Account events published after transaction commit.",
+                        "dev.modularforge.kafka", "app.modules.kafka.enabled", false, List.of()),
                 optional("seed-data", "Development seed data", "Creates local demo accounts when explicitly enabled.",
                         "dev.modularforge.bootstrap", "app.data.init-users", false,
                         List.of("identity"))

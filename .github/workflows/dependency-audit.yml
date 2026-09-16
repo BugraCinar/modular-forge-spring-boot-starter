@@ -24,13 +24,13 @@ jobs:
       - run: chmod +x mvnw
       - name: Update from the public NVD cache
         if: env.NVD_API_KEY == ''
-        run: ./mvnw -B -ntp -Psecurity-audit -DskipTests -DknownExploitedEnabled=false "-DnvdDatafeedUrl=https://dependency-check.github.io/DependencyCheck_Builder/nvd_cache/nvdcve-{0}.json.gz" dependency-check:update-only
+        run: ./mvnw -B -ntp -Psecurity-audit,db-postgresql,db-mariadb -DskipTests -DknownExploitedUrl=https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json "-DnvdDatafeedUrl=https://dependency-check.github.io/DependencyCheck_Builder/nvd_cache/nvdcve-{0}.json.gz" dependency-check:update-only
       - name: Audit with the NVD API
         if: env.NVD_API_KEY != ''
-        run: ./mvnw -B -ntp -Psecurity-audit -DskipTests -DnvdApiKeyEnvironmentVariable=NVD_API_KEY verify
+        run: ./mvnw -B -ntp -Psecurity-audit,db-postgresql,db-mariadb -DskipTests -DnvdApiKeyEnvironmentVariable=NVD_API_KEY -DknownExploitedUrl=https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json dependency-check:check
       - name: Audit with cached NVD data
         if: env.NVD_API_KEY == ''
-        run: ./mvnw -B -ntp -Psecurity-audit -DskipTests -DautoUpdate=false verify
+        run: ./mvnw -B -ntp -Psecurity-audit,db-postgresql,db-mariadb -DskipTests -DautoUpdate=false dependency-check:check
       - uses: actions/upload-artifact@v7
         if: always()
         with:

@@ -1,9 +1,6 @@
 package dev.modularforge.auth;
 
 import dev.modularforge.identity.model.Admin;
-import dev.modularforge.identity.model.Role;
-import dev.modularforge.identity.model.User;
-import dev.modularforge.shared.error.ErrorResponse;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -94,7 +91,8 @@ public class AuthController {
                     "error", "Too many login attempts. Please try again later.",
                     "message", "Rate limit exceeded for login endpoint"));
         }
-        boolean isAdminLogin = "admin".equalsIgnoreCase(request.getRole());
+        // An omitted role also allows the service to resolve an administrator.
+        boolean isAdminLogin = !"user".equalsIgnoreCase(request.getRole());
 
         if (captchaEnabled && isAdminLogin) {
             if (request.getCaptchaToken() == null || request.getCaptchaToken().isEmpty()) {
